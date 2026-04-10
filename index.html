@@ -150,6 +150,7 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .goal-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:5px;}
 .goal-fill{height:100%;border-radius:3px;transition:width .4s;}
 .goal-info{font-size:11px;color:var(--text2);}
+.goal-chart-wrap{height:80px;margin-top:10px;position:relative;}
 
 /* EXTRATO */
 .ext-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
@@ -354,6 +355,15 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       </select>
       <select id="extCat" onchange="renderExtrato()"><option value="">Categoria: todas</option></select>
       <select id="extMes" onchange="renderExtrato()"><option value="">Mês: todos</option></select>
+      <select id="extSort" onchange="renderExtrato()">
+        <option value="data_desc">Mais recente primeiro</option>
+        <option value="data_asc">Mais antigo primeiro</option>
+        <option value="valor_desc">Maior valor primeiro</option>
+        <option value="valor_asc">Menor valor primeiro</option>
+        <option value="desc_asc">Descrição A→Z</option>
+        <option value="desc_desc">Descrição Z→A</option>
+        <option value="cat_asc">Categoria A→Z</option>
+      </select>
     </div>
     <div class="card">
       <div class="ext-wrap">
@@ -422,6 +432,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <button class="type-btn" id="btnOut" onclick="setTipo('saida')">↓ Saída</button>
     </div>
     <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="lData"/></div>
+    <div class="fg"><label class="fl">Hora (opcional)</label><input class="fi" type="time" id="lHora" placeholder="HH:MM"/></div>
     <div class="fg"><label class="fl">Valor (R$)</label><input class="fi" type="number" id="lValor" placeholder="0,00" step="0.01" min="0.01"/></div>
     <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="lDesc" placeholder="Ex: iFood, Salário, Uber..."/></div>
     <div class="fg" id="lCatGrp">
@@ -539,11 +550,12 @@ const today = () => {
 };
 const mesKey = d => String(d||'').slice(0,7);
 const fmtD = s => { const p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]:s||''; };
+const ALL_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+const SHORT_MONTH = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
 const monthLabel = k => {
-  const map={'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
   if(!k) return '';
   const parts=k.split('-');
-  return (map[parts[1]]||parts[1])+' '+(parts[0]||'');
+  return SHORT_MONTH[parts[1]]||parts[1];
 };
 const AUTO_COLORS=['#e879f9','#22d3ee','#a3e635','#fb7185','#38bdf8','#84cc16','#f97316','#06b6d4','#eab308','#8b5cf6','#ec4899','#14b8a6'];
 const PAGE_SZ = 20;
@@ -743,21 +755,30 @@ function renderRecentes(){
   const now=new Date(); const todayStr=today();
   const weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   const mesAtual=todayStr.slice(0,7);
-  let list=[...STATE.lancamentos].sort((a,b)=>b.data.localeCompare(a.data));
+  let list=[...STATE.lancamentos].sort((a,b)=>{
+    const dc=b.data.localeCompare(a.data);
+    if(dc!==0)return dc;
+    return (b.hora||'00:00').localeCompare(a.hora||'00:00');
+  });
   if(curRT==='hoje') list=list.filter(l=>l.data===todayStr);
   else if(curRT==='semana') list=list.filter(l=>l.data>=weekAgo.toISOString().split('T')[0]);
   else list=list.filter(l=>l.mes===mesAtual);
   list=list.slice(0,12);
   const el=document.getElementById('recList');
   if(!list.length){el.innerHTML='<div class="empty">Nenhum lançamento neste período</div>';return;}
-  el.innerHTML=list.map(l=>`
-    <div class="rec-row">
-      <span class="rec-date">${fmtD(l.data)}</span>
-      <span class="rec-desc">${l.descricao}</span>
+  el.innerHTML=list.map(l=>{
+    const transf=isTransfer(l);
+    const valClass=transf?'':l.tipo==='entrada'?'pos':'neg';
+    const prefix=transf?'↔':l.tipo==='entrada'?'+':'-';
+    const style=transf?'color:var(--text3)':'';
+    return `<div class="rec-row" style="${transf?'opacity:.75':''}">
+      <span class="rec-date">${fmtD(l.data)}${l.hora?`<br><span style="font-size:10px;color:var(--text3)">${l.hora}</span>`:''}</span>
+      <span class="rec-desc">${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3)">↔ transferência</span>`:''}</span>
       <span class="rec-cat">${l.categoria}</span>
-      <span class="rec-val sv ${l.tipo==='entrada'?'pos':'neg'}">${l.tipo==='entrada'?'+':'-'}${BRL(l.valor)}</span>
+      <span class="rec-val sv ${valClass}" style="${style}">${prefix} ${BRL(l.valor)}</span>
       <button class="rec-edit" onclick="openEdit('${l.id}')">✏</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════
@@ -820,71 +841,94 @@ function renderChart(){
 // MONTH TABS & DETAIL
 // ═══════════════════════════════════════
 function renderMonthTabs(){
-  const months=getMonths();
   const el=document.getElementById('monthTabs');
-  if(!months.length){el.innerHTML='';renderMonthContent('');return;}
-  if(!curMonth||!months.includes(curMonth)) curMonth=months[months.length-1];
-  el.innerHTML=months.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m)}</button>`).join('');
+  if(!curMonth) curMonth=ALL_MONTHS[new Date().getMonth()];
+  el.innerHTML=ALL_MONTHS.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m)}</button>`).join('');
   renderMonthContent(curMonth);
 }
 
 function selectMonth(m){
   curMonth=m;
-  document.querySelectorAll('.mtab').forEach(b=>{b.classList.toggle('active',b.textContent===monthLabel(m));});
+  document.querySelectorAll('#monthTabs .mtab').forEach(b=>b.classList.toggle('active',b.dataset&&b.getAttribute('onclick')===`selectMonth('${m}')`));
+  document.querySelectorAll('#monthTabs .mtab').forEach(b=>b.classList.toggle('active',b.textContent===monthLabel(m)&&b.getAttribute('onclick')===`selectMonth('${m}')`));
   renderMonthContent(m);
+}
+
+function isFutureMonth(m){
+  const now=today().slice(0,7);
+  return m>now;
 }
 
 function renderMonthContent(m){
   const el=document.getElementById('monthContent');
-  if(!m||!STATE.lancamentos.length){
-    el.innerHTML='<div class="empty" style="padding:2rem;color:var(--text3);">Nenhum dado. Adicione lançamentos ou sincronize com o Sheets.</div>';
-    return;
-  }
   const inc=sumIn(m); const exp=sumOut(m); const b=inc-exp;
   const ins=getIn(m); const cats=getCatsForMonth(m);
-  const maxV=cats.length?cats[0][1].total:1;
+  const hasData=ins.length>0||cats.length>0;
+  const future=isFutureMonth(m);
+  const emptyMsg=future?'Aguardando lançamentos':'Sem lançamentos este mês';
+
   el.innerHTML=`
     <div class="two-col" style="margin-bottom:12px;">
       <div class="card"><h3>Receitas</h3>
-        ${ins.map(l=>`<div class="rl"><span class="lb">${l.descricao}</span><span class="vl g sv">+${BRL(l.valor)}</span></div>`).join('')}
-        <div class="rl total"><span>Total</span><span class="vl g sv">+${BRL(inc)}</span></div>
+        ${hasData&&ins.length
+          ? ins.map(l=>`<div class="rl"><span class="lb">${l.descricao}</span><span class="vl g sv">+${BRL(l.valor)}</span></div>`).join('')+`<div class="rl total"><span>Total</span><span class="vl g sv">+${BRL(inc)}</span></div>`
+          : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
+        }
       </div>
       <div class="card"><h3>Balanço</h3>
-        <div class="rl"><span class="lb">Receita total</span><span class="vl g sv">+${BRL(inc)}</span></div>
-        <div class="rl"><span class="lb">Despesas totais</span><span class="vl r sv">−${BRL(exp)}</span></div>
-        <div class="rl total"><span>Saldo</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>
+        ${hasData
+          ? `<div class="rl"><span class="lb">Receita total</span><span class="vl g sv">+${BRL(inc)}</span></div>
+             <div class="rl"><span class="lb">Despesas totais</span><span class="vl r sv">−${BRL(exp)}</span></div>
+             <div class="rl total"><span>Saldo</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>`
+          : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
+        }
       </div>
     </div>
     <div class="card">
       <h3>Gastos por categoria — clique para detalhar</h3>
-      <div class="cat-list">
-        ${cats.map(([name,data])=>{
-          const pct=Math.round(data.total/exp*100);
-          const bw=Math.round(data.total/maxV*100);
-          const color=getCatColor(name);
-          return `<div class="cat-row" onclick="openDetail('${name.replace(/'/g,"\\'")}','${m}')">
-            <span class="cdot" style="background:${color}"></span>
-            <span class="cname">${name}</span>
-            <div class="cbar-w"><div class="cbar-f" style="width:${bw}%;background:${color}"></div></div>
-            <span class="cpct">${pct}%</span>
-            <span class="cval sv" style="color:${color}">${BRL(data.total)}</span>
-            <span class="carrow">›</span>
-          </div>`;
-        }).join('')}
-      </div>
+      ${cats.length
+        ? `<div class="cat-list">${cats.map(([name,data])=>{
+            const pct=Math.round(data.total/exp*100);
+            const bw=Math.round(data.total/cats[0][1].total*100);
+            const color=getCatColor(name);
+            return `<div class="cat-row" onclick="openDetail('${name.replace(/'/g,"\\'")}','${m}')">
+              <span class="cdot" style="background:${color}"></span>
+              <span class="cname">${name}</span>
+              <div class="cbar-w"><div class="cbar-f" style="width:${bw}%;background:${color}"></div></div>
+              <span class="cpct">${pct}%</span>
+              <span class="cval sv" style="color:${color}">${BRL(data.total)}</span>
+              <span class="carrow">›</span>
+            </div>`;
+          }).join('')}</div>`
+        : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
+      }
     </div>`;
 }
 
 // ═══════════════════════════════════════
 // GOALS
 // ═══════════════════════════════════════
+const goalCharts = {};
+
+function getGoalHistory(nome){
+  // Get monthly closing balance for this meta from transfers
+  const result = {};
+  STATE.lancamentos.filter(l=>isTransfer(l)&&l.categoria.includes(
+    nome==='reserva_emergencia'?'Reserva':'casa_nova'?'Casa':''))
+    .forEach(l=>{
+      if(!result[l.mes]) result[l.mes]=0;
+      result[l.mes]+= l.tipo==='saida'?l.valor:-l.valor;
+    });
+  return result;
+}
+
 function renderGoals(){
   const el=document.getElementById('goalsGrid');
   if(!STATE.metas.length){
     el.innerHTML='<div class="empty" style="padding:1rem;color:var(--text3);">Sem metas configuradas.</div>';
     return;
   }
-  el.innerHTML=STATE.metas.map(g=>{
+  el.innerHTML=STATE.metas.map((g,gi)=>{
     const pct=Math.min(100,Math.round(g.saldo/g.meta*100));
     return `<div class="goal-card">
       <div class="goal-hdr">
@@ -900,8 +944,63 @@ function renderGoals(){
       </div>
       <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${g.color}"></div></div>
       <div class="goal-info">${pct}% concluído · faltam ${BRL(g.meta-g.saldo)}</div>
+      <div class="goal-chart-wrap"><canvas id="goalChart_${gi}"></canvas></div>
     </div>`;
   }).join('');
+
+  // Render mini charts after DOM update
+  setTimeout(()=>{
+    STATE.metas.forEach((g,gi)=>{
+      const canvas=document.getElementById(`goalChart_${gi}`);
+      if(!canvas)return;
+      if(goalCharts[gi]) goalCharts[gi].destroy();
+
+      // Build monthly balance progression
+      const transfers=STATE.lancamentos.filter(l=>isTransfer(l)&&l.descricao.toLowerCase().includes(g.label.toLowerCase().split(' ')[0].toLowerCase()));
+      const monthMap={};
+      let running=0;
+      // Use all months and accumulate
+      const allM=[...new Set(STATE.lancamentos.map(l=>l.mes))].sort();
+      allM.forEach(m=>{
+        const inflow=STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='saida'&&(l.descricao+l.categoria).toLowerCase().includes(g.nome==='reserva_emergencia'?'reserva':'casa')).reduce((s,l)=>s+l.valor,0);
+        const outflow=STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='entrada'&&(l.descricao+l.categoria).toLowerCase().includes(g.nome==='reserva_emergencia'?'reserva':'casa')).reduce((s,l)=>s+l.valor,0);
+        running+=inflow-outflow;
+        monthMap[m]=Math.max(0,running);
+      });
+      // If no transfer history, just show current saldo at latest month
+      const labels=Object.keys(monthMap).map(m=>monthLabel(m));
+      const data=Object.values(monthMap);
+      if(!labels.length){
+        labels.push('Atual');
+        data.push(g.saldo);
+      }
+
+      goalCharts[gi]=new Chart(canvas,{
+        type:'line',
+        data:{
+          labels,
+          datasets:[{
+            data,
+            borderColor:g.color,
+            backgroundColor:g.color+'22',
+            borderWidth:2,
+            pointRadius:3,
+            pointBackgroundColor:g.color,
+            fill:true,
+            tension:0.3,
+          }]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>privOn?' ••••':' '+BRL(ctx.raw)}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:'#505060',font:{size:9}}},
+            y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#505060',font:{size:9},callback:v=>privOn?'•':'R$'+Math.round(v/1000)+'k'}}
+          }
+        }
+      });
+    });
+  },50);
 }
 
 // ═══════════════════════════════════════
@@ -921,19 +1020,30 @@ function getExtFiltered(){
   const tp=document.getElementById('extTipo')?.value||'';
   const ct=document.getElementById('extCat')?.value||'';
   const ms=document.getElementById('extMes')?.value||'';
-  return [...STATE.lancamentos]
-    .filter(l=>{
-      if(tp==='transferencia' && !isTransfer(l)) return false;
-      if(tp && tp!=='transferencia'){
-        if(isTransfer(l)) return false;
-        if(l.tipo!==tp) return false;
-      }
-      if(ct&&l.categoria!==ct)return false;
-      if(ms&&l.mes!==ms)return false;
-      if(q&&!l.descricao.toLowerCase().includes(q)&&!l.categoria.toLowerCase().includes(q))return false;
-      return true;
-    })
-    .sort((a,b)=>b.data.localeCompare(a.data));
+  const sort=document.getElementById('extSort')?.value||'data_desc';
+  let list=[...STATE.lancamentos].filter(l=>{
+    if(tp==='transferencia' && !isTransfer(l)) return false;
+    if(tp && tp!=='transferencia'){
+      if(isTransfer(l)) return false;
+      if(l.tipo!==tp) return false;
+    }
+    if(ct&&l.categoria!==ct)return false;
+    if(ms&&l.mes!==ms)return false;
+    if(q&&!l.descricao.toLowerCase().includes(q)&&!l.categoria.toLowerCase().includes(q))return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    switch(sort){
+      case 'data_asc': return a.data.localeCompare(b.data)||(a.hora||'').localeCompare(b.hora||'');
+      case 'valor_desc': return b.valor-a.valor;
+      case 'valor_asc': return a.valor-b.valor;
+      case 'desc_asc': return a.descricao.localeCompare(b.descricao,'pt-BR');
+      case 'desc_desc': return b.descricao.localeCompare(a.descricao,'pt-BR');
+      case 'cat_asc': return a.categoria.localeCompare(b.categoria,'pt-BR');
+      default: return b.data.localeCompare(a.data)||(b.hora||'').localeCompare(a.hora||'');
+    }
+  });
+  return list;
 }
 
 function renderExtrato(){
@@ -953,7 +1063,7 @@ function renderExtrato(){
       const valColor = transf ? 'color:var(--text3)' : '';
       const rowStyle = transf ? 'opacity:.7' : '';
       return `<tr style="${rowStyle}">
-        <td>${fmtD(l.data)}</td>
+        <td>${fmtD(l.data)}${l.hora?`<br><span style="font-size:10px;color:var(--text3)">${l.hora}</span>`:''}</td>
         <td>${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3);margin-left:4px;">↔ transferência</span>`:''}</td>
         <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3)">${l.categoria}</span></td>
         <td class="${valClass} sv" style="${valColor};text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">${valPrefix} ${BRL(l.valor)}</td>
@@ -1097,6 +1207,7 @@ function onCatChange(v){
 async function submitLanc(){
   const valor=parseFloat(document.getElementById('lValor').value);
   const data=document.getElementById('lData').value;
+  const hora=document.getElementById('lHora').value||'';
   const desc=document.getElementById('lDesc').value.trim();
   if(!valor||valor<=0||!data||!desc){alert('Preencha todos os campos');return;}
   let cat=lancTipo==='entrada'
@@ -1112,7 +1223,7 @@ async function submitLanc(){
   }
   const mes=mesKey(data);
   const id='l'+Date.now()+Math.floor(Math.random()*1000);
-  const lanc={id,data,tipo:lancTipo,descricao:desc,categoria:cat,valor,mes,origem:'manual'};
+  const lanc={id,data,hora,tipo:lancTipo,descricao:desc,categoria:cat,valor,mes,origem:'manual'};
   STATE.lancamentos.push(lanc);
   if(lancTipo==='entrada') STATE.saldo=Math.round((STATE.saldo+valor)*100)/100;
   else STATE.saldo=Math.round((STATE.saldo-valor)*100)/100;
