@@ -253,6 +253,15 @@ body.prv .sv::after{content:'••••';position:absolute;left:50%;top:50%;tr
 body.prv .saldo-valor{color:transparent!important;background:var(--surface2);border-radius:6px;position:relative;min-width:120px;display:inline-block;}
 body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--text3);font-size:1rem;letter-spacing:4px;pointer-events:none;}
 
+/* PERIOD FILTER */
+.period-filter{position:relative;}
+.period-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;}
+.period-btn:hover{background:var(--surface3,var(--surface2));color:var(--text);}
+.period-btn.active{border-color:var(--blue);color:var(--blue);}
+.period-picker{position:absolute;top:calc(100% + 6px);left:0;z-index:100;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:14px;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.period-quick{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:4px 10px;font-size:11px;color:var(--text2);cursor:pointer;}
+.period-quick:hover{background:var(--bdim);color:var(--blue);border-color:var(--blue);}
+
 /* CURRENCY INPUT */
 .currency-input{ font-variant-numeric:tabular-nums; }
 
@@ -310,8 +319,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     </div>
     <div class="nav-actions">
       <select class="icon-btn" id="yearSelector" onchange="changeYear(this.value)" style="cursor:pointer;padding:5px 10px;">
-        <option value="2026">2026</option>
-        <option value="2025">2025</option>
+        <option value="">Ano</option>
       </select>
       <button class="icon-btn" id="syncBtn" onclick="syncData()"><span class="spinner" id="syncSpinner" style="display:none"></span><span id="syncTxt">⟳ Sync</span></button>
       <button class="icon-btn" id="privBtn" onclick="togglePrivacy()">👁 <span id="privTxt">Ocultar</span></button>
@@ -400,11 +408,32 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   <div style="padding-top:.5rem;">
     <div class="ext-filters">
       <input type="text" id="extSearch" placeholder="Buscar descrição ou categoria..." oninput="renderExtrato()"/>
-      <select id="extAno" onchange="renderExtrato()">
-        <option value="">Ano: todos</option>
-        <option value="2026">2026</option>
-        <option value="2025">2025</option>
-      </select>
+      <div class="period-filter" id="periodFilter">
+        <button class="period-btn" id="periodBtn" onclick="togglePeriodPicker()">
+          <span id="periodLabel">📅 Período: todos</span>
+        </button>
+        <div class="period-picker" id="periodPicker" style="display:none;">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">De</div>
+              <input type="date" class="fi" id="extDataDe" style="width:130px;font-size:12px;padding:5px 8px;" oninput="applyPeriodFilter()"/>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Até</div>
+              <input type="date" class="fi" id="extDataAte" style="width:130px;font-size:12px;padding:5px 8px;" oninput="applyPeriodFilter()"/>
+            </div>
+            <button class="btn btn-neu" style="padding:5px 10px;font-size:11px;height:30px;" onclick="clearPeriodFilter()">Limpar</button>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
+            <button class="period-quick" onclick="setPeriodQuick('mes')">Este mês</button>
+            <button class="period-quick" onclick="setPeriodQuick('mes_ant')">Mês anterior</button>
+            <button class="period-quick" onclick="setPeriodQuick('ano')">Este ano</button>
+            <button class="period-quick" onclick="setPeriodQuick('ano_ant')">Ano anterior</button>
+            <button class="period-quick" onclick="setPeriodQuick('7d')">Últimos 7 dias</button>
+            <button class="period-quick" onclick="setPeriodQuick('30d')">Últimos 30 dias</button>
+          </div>
+        </div>
+      </div>
       <select id="extTipo" onchange="renderExtrato()">
         <option value="">Tipo: todos</option>
         <option value="entrada">Entradas</option>
@@ -412,7 +441,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
         <option value="transferencia">Transferências (metas)</option>
       </select>
       <select id="extCat" onchange="renderExtrato()"><option value="">Categoria: todas</option></select>
-      <select id="extMes" onchange="renderExtrato()"><option value="">Mês: todos</option></select>
       <select id="extSort" onchange="renderExtrato()">
         <option value="data_desc">Mais recente primeiro</option>
         <option value="data_asc">Mais antigo primeiro</option>
@@ -751,9 +779,55 @@ const today = () => {
 };
 const mesKey = d => String(d||'').slice(0,7);
 const fmtD = s => { const p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]:s||''; };
-const ALL_MONTHS_2026 = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
-const ALL_MONTHS_2025 = ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'];
-let ALL_MONTHS = ALL_MONTHS_2026;
+// ── YEAR HELPERS (fully dynamic) ──
+function monthsForYear(year){
+  return Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`);
+}
+function availableYears(){
+  const fromData = [...new Set(STATE.lancamentos.map(l=>l.mes?.slice(0,4)).filter(Boolean))].map(Number);
+  const current = new Date().getFullYear();
+
+  // Find years from agenda within the next 12 months
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth() + 12, now.getDate());
+  const agendaYears = new Set();
+
+  STATE.agenda.forEach(a => {
+    if(a.status === 'cancelado' || a.status === 'concluido') return;
+
+    if(a.tipo === 'unico') {
+      // Unique: check data_unica
+      if(a.data_unica) {
+        const d = new Date(a.data_unica);
+        if(d <= cutoff) agendaYears.add(d.getFullYear());
+      }
+    } else {
+      // Recorrente/assinatura: generate all vencimentos from proxima_data (or calculated) up to 12 months
+      const dia = parseInt(a.dia_vencimento) || 1;
+      let base;
+      if(a.proxima_data && a.proxima_data.length >= 7) {
+        const p = a.proxima_data.split('-');
+        base = new Date(parseInt(p[0]), parseInt(p[1])-1, dia);
+      } else {
+        // Calculate next occurrence
+        base = new Date(now.getFullYear(), now.getMonth(), dia);
+        if(base <= now) base.setMonth(base.getMonth() + 1);
+      }
+      // Walk forward month by month up to cutoff
+      const periodicidade = a.periodicidade || 'mensal';
+      const intervalo = {mensal:1, parcelado_12x:1, trimestral:3, semestral:6, anual:12}[periodicidade] || 1;
+      let cur = new Date(base);
+      while(cur <= cutoff) {
+        agendaYears.add(cur.getFullYear());
+        cur.setMonth(cur.getMonth() + intervalo);
+      }
+    }
+  });
+
+  const years = new Set([...fromData, current, ...agendaYears]);
+  return [...years].sort((a,b)=>b-a);
+}
+let ALL_MONTHS = monthsForYear(new Date().getFullYear());
 const SHORT_MONTH = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
 const monthLabel = k => {
   if(!k) return '';
@@ -761,7 +835,7 @@ const monthLabel = k => {
   return SHORT_MONTH[parts[1]]||parts[1];
 };
 const AUTO_COLORS=['#e879f9','#22d3ee','#a3e635','#fb7185','#38bdf8','#84cc16','#f97316','#06b6d4','#eab308','#8b5cf6','#ec4899','#14b8a6'];
-const PAGE_SZ = 20;
+const EXT_PAGE_SZ = 50;
 
 let CFG = {
   url: localStorage.getItem('df_url')||'',
@@ -776,7 +850,7 @@ let STATE = {
   lancamentos: [],
   agenda: [],
 };
-let privOn=false, chartInst=null, curMonth='', curYear=2026, curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false;
+let privOn=false, chartInst=null, curMonth='', curYear=new Date().getFullYear(), curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false;
 
 const META_COLORS = ['#34d399','#60a5fa','#f472b6','#fbbf24','#a78bfa','#fb923c','#2dd4bf','#f87171','#818cf8','#86efac','#e879f9','#94a3b8'];
 
@@ -1011,7 +1085,7 @@ function sumAgendaMonth(m){
 
 function getDataForAI(includeAllYears=false){
   const monthsToAnalyze = includeAllYears
-    ? [...ALL_MONTHS_2025, ...ALL_MONTHS_2026]
+    ? availableYears().slice().reverse().flatMap(y=>monthsForYear(y))
     : ALL_MONTHS; // usa o ano selecionado atualmente
   const summary=monthsToAnalyze.map(m=>{
     const inc=sumIn(m); const exp=sumOut(m); const inv=sumMeta(m);
@@ -1020,14 +1094,22 @@ function getDataForAI(includeAllYears=false){
     return `${monthLabel(m)}: receitas R$${inc.toFixed(2)}, despesas R$${exp.toFixed(2)}, aportes em metas R$${inv.toFixed(2)}, saldo R$${(inc-exp-inv).toFixed(2)}. Categorias: ${cats}`;
   }).filter(Boolean).join('\n');
   const metas=STATE.metas.map(m=>`${m.label}: R$${m.saldo.toFixed(2)} / R$${m.meta.toFixed(2)}`).join(', ');
-  const anoCtx = includeAllYears ? '2025–2026' : String(curYear);
+  const anoCtx = includeAllYears ? availableYears().slice().reverse().join('–') : String(curYear);
   return `DADOS FINANCEIROS (${anoCtx}):\nSaldo em conta: R$${STATE.saldo.toFixed(2)}\nMetas: ${metas}\n\nRESUMO POR MÊS:\n${summary||'Sem dados para este período.'}`;
+}
+
+function updateYearSelector(){
+  const sel = document.getElementById('yearSelector');
+  if(!sel) return;
+  const years = availableYears();
+  sel.innerHTML = years.map(y=>`<option value="${y}"${y===curYear?' selected':''}>${y}</option>`).join('');
 }
 
 // ═══════════════════════════════════════
 // RENDER ALL
 // ═══════════════════════════════════════
 function renderAll(){
+  updateYearSelector();
   processVencidos();
   renderSaldo();
   renderRecentes();
@@ -1180,7 +1262,7 @@ function renderKPI(){
   const monthsWithData=ALL_MONTHS.filter(m=>sumIn(m)>0||sumOut(m)>0);
   const avg=monthsWithData.length?aE/monthsWithData.length:0;
   const mesAtual=today().slice(0,7);
-  const programado=curYear===2026?sumAgendaMonth(mesAtual):0;
+  const programado=curYear===new Date().getFullYear()?sumAgendaMonth(mesAtual):0;
   document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi g"><div class="kpi-label">Total de receitas</div><div class="kpi-val sv">${BRL(aI)}</div><div class="kpi-sub">${curYear}</div></div>
     <div class="kpi r"><div class="kpi-label">Total de despesas</div><div class="kpi-val sv">${BRL(aE)}</div><div class="kpi-sub">${curYear}</div></div>
@@ -1232,7 +1314,7 @@ function renderMonthTabs(){
   const yearStr = String(curYear);
   // Default: last month with data, or current month if 2026, or December if 2025
   if(!curMonth || !curMonth.startsWith(yearStr)){
-    if(curYear === 2026){
+    if(curYear === new Date().getFullYear()){
       curMonth = ALL_MONTHS[new Date().getMonth()];
     } else {
       // Find last month with data in selected year, fallback to last month
@@ -1240,7 +1322,7 @@ function renderMonthTabs(){
       curMonth = withData.length ? withData[withData.length-1] : ALL_MONTHS[11];
     }
   }
-  el.innerHTML=ALL_MONTHS.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m).replace(' '+yearStr,'')}</button>`).join('');
+  el.innerHTML=ALL_MONTHS.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m).replace(' '+String(curYear),'')}</button>`).join('');
   renderMonthContent(curMonth);
 }
 
@@ -1431,7 +1513,7 @@ function renderGoals(){
         data[data.length-1] = g.saldo;
       }
 
-      const labels = monthsToShow.map(m=>monthLabel(m).replace(' '+yearStr,''));
+      const labels = monthsToShow.map(m=>monthLabel(m).replace(' '+String(curYear),''));
 
       goalCharts[gi]=new Chart(canvas,{
         type:'line',
@@ -1462,33 +1544,110 @@ function renderGoals(){
 }
 
 // ═══════════════════════════════════════
+// PERÍODO — EXTRATO
+// ═══════════════════════════════════════
+function togglePeriodPicker(){
+  const picker = document.getElementById('periodPicker');
+  const btn = document.getElementById('periodBtn');
+  const open = picker.style.display === 'none';
+  picker.style.display = open ? 'block' : 'none';
+  btn.classList.toggle('active', open);
+  // Close when clicking outside
+  if(open){
+    setTimeout(()=>{
+      document.addEventListener('click', closePeriodOnOutside, {once:true});
+    },0);
+  }
+}
+
+function closePeriodOnOutside(e){
+  const filter = document.getElementById('periodFilter');
+  if(filter && !filter.contains(e.target)){
+    document.getElementById('periodPicker').style.display='none';
+    document.getElementById('periodBtn').classList.remove('active');
+  } else {
+    // Re-attach if click was inside
+    document.addEventListener('click', closePeriodOnOutside, {once:true});
+  }
+}
+
+function applyPeriodFilter(){
+  const de = document.getElementById('extDataDe')?.value||'';
+  const ate = document.getElementById('extDataAte')?.value||'';
+  const btn = document.getElementById('periodBtn');
+  const label = document.getElementById('periodLabel');
+  if(de || ate){
+    const deStr = de ? fmtD(de) : '...';
+    const ateStr = ate ? fmtD(ate) : '...';
+    label.textContent = `📅 ${deStr} → ${ateStr}`;
+    btn.classList.add('active');
+  } else {
+    label.textContent = '📅 Período: todos';
+    btn.classList.remove('active');
+  }
+  renderExtrato();
+}
+
+function clearPeriodFilter(){
+  document.getElementById('extDataDe').value='';
+  document.getElementById('extDataAte').value='';
+  applyPeriodFilter();
+}
+
+function setPeriodQuick(tipo){
+  const now = new Date();
+  let de='', ate='';
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  if(tipo==='mes'){
+    de = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    ate = fmt(new Date(now.getFullYear(), now.getMonth()+1, 0));
+  } else if(tipo==='mes_ant'){
+    de = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    ate = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+  } else if(tipo==='ano'){
+    de = `${now.getFullYear()}-01-01`;
+    ate = `${now.getFullYear()}-12-31`;
+  } else if(tipo==='ano_ant'){
+    de = `${now.getFullYear()-1}-01-01`;
+    ate = `${now.getFullYear()-1}-12-31`;
+  } else if(tipo==='7d'){
+    const d7 = new Date(now); d7.setDate(d7.getDate()-6);
+    de = fmt(d7); ate = fmt(now);
+  } else if(tipo==='30d'){
+    const d30 = new Date(now); d30.setDate(d30.getDate()-29);
+    de = fmt(d30); ate = fmt(now);
+  }
+  document.getElementById('extDataDe').value = de;
+  document.getElementById('extDataAte').value = ate;
+  applyPeriodFilter();
+}
+
+// ═══════════════════════════════════════
 // EXTRATO
 // ═══════════════════════════════════════
 function updateExtFilters(){
   const cats=[...new Set(STATE.lancamentos.map(l=>l.categoria))].sort();
-  const allMesKeys=[...new Set(STATE.lancamentos.map(l=>l.mes))].filter(Boolean).sort();
   const cSel=document.getElementById('extCat');
-  const mSel=document.getElementById('extMes');
   if(cSel) cSel.innerHTML='<option value="">Categoria: todas</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  if(mSel) mSel.innerHTML='<option value="">Mês: todos</option>'+allMesKeys.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
 }
 
 function getExtFiltered(){
   const q=(document.getElementById('extSearch')?.value||'').toLowerCase();
   const tp=document.getElementById('extTipo')?.value||'';
   const ct=document.getElementById('extCat')?.value||'';
-  const ms=document.getElementById('extMes')?.value||'';
-  const ano=document.getElementById('extAno')?.value||'';
+  const de=document.getElementById('extDataDe')?.value||'';
+  const ate=document.getElementById('extDataAte')?.value||'';
   const sort=document.getElementById('extSort')?.value||'data_desc';
   let list=[...STATE.lancamentos].filter(l=>{
-    if(ano && !l.mes.startsWith(ano)) return false;
+    if(de && l.data < de) return false;
+    if(ate && l.data > ate) return false;
     if(tp==='transferencia' && !isTransfer(l)) return false;
     if(tp && tp!=='transferencia'){
       if(isTransfer(l)) return false;
       if(l.tipo!==tp) return false;
     }
     if(ct&&l.categoria!==ct)return false;
-    if(ms&&l.mes!==ms)return false;
     if(q&&!l.descricao.toLowerCase().includes(q)&&!l.categoria.toLowerCase().includes(q))return false;
     return true;
   });
@@ -1506,38 +1665,67 @@ function getExtFiltered(){
   return list;
 }
 
+let extVisible = EXT_PAGE_SZ; // how many rows currently shown
+
+function rowHtml(l){
+  const transf = isTransfer(l);
+  const valClass = transf ? '' : l.tipo==='entrada' ? 'vpos' : 'vneg';
+  const valPrefix = transf ? '↔' : l.tipo==='entrada' ? '+' : '-';
+  const valColor = transf ? 'color:var(--text3)' : '';
+  const rowStyle = transf ? 'opacity:.7' : '';
+  return `<tr style="${rowStyle}">
+    <td>${fmtD(l.data)}${l.hora?`<br><span style="font-size:10px;color:var(--text3)">${l.hora}</span>`:''}</td>
+    <td>${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3);margin-left:4px;">↔ transferência</span>`:''}</td>
+    <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3)">${l.categoria}</span></td>
+    <td class="${valClass} sv" style="${valColor};text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">${valPrefix} ${BRL(l.valor)}</td>
+    <td class="acts">
+      <button class="tbtn" onclick="openEdit('${l.id}')">Editar</button>
+      <button class="tbtn del" onclick="openDel('${l.id}')">Excluir</button>
+    </td>
+  </tr>`;
+}
+
 function renderExtrato(){
+  extVisible = EXT_PAGE_SZ; // reset on filter change
   const list=getExtFiltered();
-  const total=list.length;
-  const pages=Math.ceil(total/PAGE_SZ)||1;
-  if(extPage>pages)extPage=1;
-  const slice=list.slice((extPage-1)*PAGE_SZ,extPage*PAGE_SZ);
   const tb=document.getElementById('extTbody');
   if(!tb)return;
-  tb.innerHTML=!slice.length
-    ?`<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">Nenhum lançamento encontrado</td></tr>`
-    :slice.map(l=>{
-      const transf = isTransfer(l);
-      const valClass = transf ? '' : l.tipo==='entrada' ? 'vpos' : 'vneg';
-      const valPrefix = transf ? '↔' : l.tipo==='entrada' ? '+' : '-';
-      const valColor = transf ? 'color:var(--text3)' : '';
-      const rowStyle = transf ? 'opacity:.7' : '';
-      return `<tr style="${rowStyle}">
-        <td>${fmtD(l.data)}${l.hora?`<br><span style="font-size:10px;color:var(--text3)">${l.hora}</span>`:''}</td>
-        <td>${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3);margin-left:4px;">↔ transferência</span>`:''}</td>
-        <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3)">${l.categoria}</span></td>
-        <td class="${valClass} sv" style="${valColor};text-align:right;font-variant-numeric:tabular-nums;font-weight:500;">${valPrefix} ${BRL(l.valor)}</td>
-        <td class="acts">
-          <button class="tbtn" onclick="openEdit('${l.id}')">Editar</button>
-          <button class="tbtn del" onclick="openDel('${l.id}')">Excluir</button>
-        </td>
-      </tr>`;
-    }).join('');
-  const pg=document.getElementById('extPages');
-  if(pg) pg.innerHTML=`<span>${total} registros</span>
-    <button class="pgbtn" onclick="extPage--;renderExtrato()" ${extPage<=1?'disabled':''}>‹</button>
-    <span>${extPage}/${pages}</span>
-    <button class="pgbtn" onclick="extPage++;renderExtrato()" ${extPage>=pages?'disabled':''}>›</button>`;
+  const slice = list.slice(0, extVisible);
+  tb.innerHTML = !slice.length
+    ? `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">Nenhum lançamento encontrado</td></tr>`
+    : slice.map(rowHtml).join('');
+  renderExtratoFooter(list);
+}
+
+function showMoreExtrato(){
+  const list = getExtFiltered();
+  extVisible = Math.min(extVisible + EXT_PAGE_SZ, list.length);
+  const tb = document.getElementById('extTbody');
+  if(!tb) return;
+  // Append new rows without re-rendering existing ones
+  const newRows = list.slice(extVisible - EXT_PAGE_SZ, extVisible);
+  // Actually just re-render the slice for simplicity — still fast
+  tb.innerHTML = list.slice(0, extVisible).map(rowHtml).join('');
+  renderExtratoFooter(list);
+}
+
+function renderExtratoFooter(list){
+  const total = list.length;
+  const showing = Math.min(extVisible, total);
+  const remaining = total - showing;
+  const pg = document.getElementById('extPages');
+  if(!pg) return;
+  pg.innerHTML = `
+    <span style="color:var(--text3);font-size:12px;">Mostrando ${showing} de ${total} registros</span>
+    ${remaining > 0
+      ? `<button class="pgbtn" onclick="showMoreExtrato()" style="padding:6px 18px;border-color:var(--bb);color:var(--blue);">
+          Mostrar mais ${Math.min(remaining, EXT_PAGE_SZ)} →
+        </button>`
+      : total > EXT_PAGE_SZ
+        ? `<span style="font-size:11px;color:var(--text3);">Todos os registros exibidos</span>`
+        : ''
+    }
+  `;
 }
 
 // ═══════════════════════════════════════
@@ -1594,9 +1782,10 @@ async function sendChat(){
   addChatMsg('ai','<span class="spinner"></span> Pensando...','loading');
   try{
     // Detecta se a pergunta menciona 2025 para incluir dados desse ano
-    const inclui2025 = msg.includes('2025') || msg.toLowerCase().includes('ano passado') || msg.toLowerCase().includes('histórico completo');
+    const anoPassado = new Date().getFullYear() - 1;
+    const inclui2025 = msg.includes(String(anoPassado)) || availableYears().some(y=>msg.includes(String(y))&&y!==curYear) || msg.toLowerCase().includes('ano passado') || msg.toLowerCase().includes('histórico completo');
     const dados=getDataForAI(inclui2025);
-    const anoCtx = inclui2025 ? '2025 e 2026' : String(curYear);
+    const anoCtx = inclui2025 ? 'todos os anos disponíveis' : String(curYear);
     const system=`Você é um assistente financeiro pessoal. Responda perguntas sobre as finanças do usuário com base nos dados fornecidos (${anoCtx}). Seja conciso, use os valores reais dos dados, e responda em português do Brasil. Dados:\n\n${dados}`;
     const messages=chatHistory.map(m=>({role:m.role,content:m.content}));
     const reply=await callClaude(system, null, messages);
@@ -1670,7 +1859,7 @@ function onCatChange(v){
   }
 }
 
-async function submitLanc(){
+function submitLanc(){
   const btn = getSubmitBtn('mLanc');
   if(btn && btn.disabled) return;
   const valor=getCurrencyVal('lValor');
@@ -1687,9 +1876,8 @@ async function submitLanc(){
     cat=nome;
     const nova={nome,cor:newCatColor,tipo:'despesa'};
     STATE.categorias.push(nova);
-    await push('addCategoria',nova);
+    pushBg('addCategoria',nova);
   }
-  btnLoading(btn, true);
   const mes=mesKey(data);
   const id='l'+Date.now()+Math.floor(Math.random()*1000);
   const lanc={id,data,hora,tipo:lancTipo,descricao:desc,categoria:cat,valor,mes,origem:'manual'};
@@ -1698,11 +1886,10 @@ async function submitLanc(){
   else STATE.saldo=Math.round((STATE.saldo-valor)*100)/100;
   STATE.saldoDate=fmtD(data);
   saveLocal();
-  await push('addLancamento',{...lanc,valor:String(valor)});
-  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
-  btnLoading(btn, false);
   closeModal('mLanc');
   renderAll();
+  pushBg('addLancamento',{...lanc,valor:String(valor)});
+  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
 // ═══════════════════════════════════════
@@ -1720,7 +1907,7 @@ function openMeta(nome,acao){
   openModal('mMeta');
 }
 
-async function submitMeta(){
+function submitMeta(){
   const btn = document.getElementById('mMetaBtn');
   if(btn && btn.disabled) return;
   const valor=getCurrencyVal('mValor');
@@ -1738,18 +1925,16 @@ async function submitMeta(){
     meta.saldo=Math.round((meta.saldo-valor)*100)/100;
     STATE.saldo=Math.round((STATE.saldo+valor)*100)/100;
   }
-  btnLoading(btn, true);
   STATE.saldoDate=fmtD(data);
   const catLabel=metaAcao==='guardar'?`Depósito → ${meta.label}`:`Retirada ← ${meta.label}`;
   const lanc={id:'m'+Date.now(),data,tipo:metaAcao==='guardar'?'saida':'entrada',descricao:desc||catLabel,categoria:catLabel,valor,mes:mesKey(data),origem:'caixinha'};
   STATE.lancamentos.push(lanc);
   saveLocal();
-  await push('updateMeta',{nome:meta.nome,saldo:String(meta.saldo),data:STATE.saldoDate});
-  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
-  await push('addLancamento',{...lanc,valor:String(valor)});
-  btnLoading(btn, false);
   closeModal('mMeta');
   renderAll();
+  pushBg('updateMeta',{nome:meta.nome,saldo:String(meta.saldo),data:STATE.saldoDate});
+  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  pushBg('addLancamento',{...lanc,valor:String(valor)});
 }
 
 // ═══════════════════════════════════════
@@ -1780,7 +1965,7 @@ function editBack(){
   document.getElementById('eActs1').style.display='flex';
   document.getElementById('eActs2').style.display='none';
 }
-async function editStep2(){
+function editStep2(){
   const btn = document.getElementById('eActs2')?.querySelector('.btn-blue');
   if(btn && btn.disabled) return;
   const id=document.getElementById('eId').value;
@@ -1796,13 +1981,11 @@ async function editStep2(){
   if(l.tipo==='entrada') STATE.saldo=Math.round((STATE.saldo+nv)*100)/100;
   else STATE.saldo=Math.round((STATE.saldo-nv)*100)/100;
   l.data=nd; l.valor=nv; l.descricao=ndesc; l.categoria=ncat; l.mes=mesKey(nd);
-  btnLoading(btn, true);
   saveLocal();
-  await push('editLancamento',{id,data:nd,tipo:l.tipo,descricao:ndesc,categoria:ncat,valor:String(nv),mes:l.mes});
-  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
-  btnLoading(btn, false);
   closeModal('mEdit');
   renderAll();
+  pushBg('editLancamento',{id,data:nd,tipo:l.tipo,descricao:ndesc,categoria:ncat,valor:String(nv),mes:l.mes});
+  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
 // ═══════════════════════════════════════
@@ -1821,7 +2004,7 @@ function delStep2(){
   document.getElementById('delStep1').style.display='none';
   document.getElementById('delStep2').style.display='block';
 }
-async function delConfirm(){
+function delConfirm(){
   const btn = document.getElementById('delStep2')?.querySelector('.btn-red');
   if(btn && btn.disabled) return;
   const id=pendingDelId;
@@ -1831,13 +2014,11 @@ async function delConfirm(){
     else STATE.saldo=Math.round((STATE.saldo+l.valor)*100)/100;
   }
   STATE.lancamentos=STATE.lancamentos.filter(l=>l.id!==id);
-  btnLoading(btn, true);
   saveLocal();
-  await push('delLancamento',{id});
-  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
-  btnLoading(btn, false);
   closeModal('mDel');
   renderAll();
+  pushBg('delLancamento',{id});
+  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
 // ═══════════════════════════════════════
@@ -2063,7 +2244,6 @@ async function submitAgenda(){
   const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
   const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(getCurrencyVal('agParcela')):0;
   if(!nome){ alert('Digite o nome'); return; }
-  btnLoading(btn, true);
   const payload = {
     tipo, nome, descricao:desc, categoria:cat,
     valor:String(valor), valor_parcela:String(parcela),
@@ -2074,18 +2254,18 @@ async function submitAgenda(){
   if(id){
     const item = STATE.agenda.find(a=>a.id===id);
     if(item) Object.assign(item,{...payload,id});
-    await push('editAgenda',{id,...payload});
+    saveLocal();
+    closeModal('mAgenda');
+    renderAgenda(); renderKPI(); renderChart();
+    pushBg('editAgenda',{id,...payload});
   } else {
     const newId = 'a'+Date.now();
     STATE.agenda.push({id:newId,...payload,ultima_confirmacao:'',proxima_data:''});
-    await push('addAgenda',{id:newId,...payload});
+    saveLocal();
+    closeModal('mAgenda');
+    renderAgenda(); renderKPI(); renderChart();
+    pushBg('addAgenda',{id:newId,...payload});
   }
-  saveLocal();
-  btnLoading(btn, false);
-  closeModal('mAgenda');
-  renderAgenda();
-  renderKPI();
-  renderChart();
 }
 
 function openPagar(id){
@@ -2113,7 +2293,6 @@ async function submitPagar(){
   if(!valor||valor<=0){ alert('Digite um valor válido'); return; }
   const item = STATE.agenda.find(a=>a.id===id);
   if(!item) return;
-  btnLoading(btn, true);
   const mes = mesKey(data);
   let proxima = '';
   if(item.tipo !== 'unico'){
@@ -2130,11 +2309,10 @@ async function submitPagar(){
   item.proxima_data = proxima;
   if(item.tipo === 'unico') item.status = 'concluido';
   saveLocal();
-  await push('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima});
-  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
-  btnLoading(btn, false);
   closeModal('mPagar');
   renderAll();
+  pushBg('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima});
+  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
 function openAdiar(id){
@@ -2143,7 +2321,7 @@ function openAdiar(id){
   openModal('mAdiar');
 }
 
-async function submitAdiar(){
+function submitAdiar(){
   const id   = document.getElementById('adId').value;
   const data = document.getElementById('adData').value;
   if(!data){ alert('Selecione uma data'); return; }
@@ -2152,19 +2330,19 @@ async function submitAdiar(){
   if(item.tipo === 'unico') item.data_unica = data;
   else item.proxima_data = data;
   saveLocal();
-  await push('editAgenda',{id,data_unica:item.data_unica||'',proxima_data:item.proxima_data||''});
   closeModal('mAdiar');
   renderAgenda();
+  pushBg('editAgenda',{id,data_unica:item.data_unica||'',proxima_data:item.proxima_data||''});
 }
 
-async function delAgendaItem(id){
+function delAgendaItem(id){
   if(!confirm('Excluir este item da agenda?')) return;
   const item = STATE.agenda.find(a=>a.id===id);
   const calId = item?.calendar_event_id || '';
   STATE.agenda = STATE.agenda.filter(a=>a.id!==id);
   saveLocal();
-  await push('delAgenda',{id, calendar_event_id: calId});
   renderAgenda();
+  pushBg('delAgenda',{id, calendar_event_id: calId});
 }
 
 // ═══════════════════════════════════════
@@ -2220,6 +2398,12 @@ function setCurrencyVal(id, value){
   el.value = n > 0 ? formatCurrency(n) : '';
 }
 
+// ── PUSH EM SEGUNDO PLANO (otimista) ──
+function pushBg(...args){
+  // Fire and forget — UI already updated, server syncs in background
+  push(...args).catch(e => console.warn('Background sync error:', e));
+}
+
 // ── BOTÃO COM LOADING — evita cliques múltiplos ──
 function btnLoading(btnEl, loading, originalText){
   if(!btnEl) return;
@@ -2252,7 +2436,7 @@ function switchPage(p){
 
 function changeYear(year){
   curYear = parseInt(year);
-  ALL_MONTHS = curYear === 2025 ? ALL_MONTHS_2025 : ALL_MONTHS_2026;
+  ALL_MONTHS = monthsForYear(curYear);
   curMonth = '';
   renderKPI();
   renderChart();
@@ -2312,7 +2496,7 @@ function openMetaEdit(nome){
   openModal('mMetaEdit');
 }
 
-async function submitMetaEdit(){
+function submitMetaEdit(){
   const btn = getSubmitBtn('mMetaEdit');
   if(btn && btn.disabled) return;
   const nome = document.getElementById('meNome').value.trim();
@@ -2321,56 +2505,50 @@ async function submitMetaEdit(){
   const color = meSelectedColor || META_COLORS[0];
   const nomeOriginal = document.getElementById('meNomeOriginal').value;
   if(!nome){ alert('Digite o nome da caixinha'); return; }
-  btnLoading(btn, true);
   if(nomeOriginal){
-    // Edit existing
     const g = STATE.metas.find(m=>m.nome===nomeOriginal);
-    if(g){
-      g.label = nome;
-      g.meta = metaVal;
-      g.saldo = saldoVal;
-      g.color = color;
-      await push('updateMeta',{nome:nomeOriginal, saldo:String(saldoVal), meta:String(metaVal), label:nome, cor:color, data:STATE.saldoDate});
-    }
+    if(g){ g.label=nome; g.meta=metaVal; g.saldo=saldoVal; g.color=color; }
+    saveLocal();
+    closeModal('mMetaEdit');
+    renderGoals();
+    pushBg('updateMeta',{nome:nomeOriginal, saldo:String(saldoVal), meta:String(metaVal), label:nome, cor:color, data:STATE.saldoDate});
   } else {
-    // New meta — create a slug from name
     const slug = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
     const newMeta = {nome:slug, label:nome, saldo:saldoVal, meta:metaVal, color, archived:false};
     STATE.metas.push(newMeta);
-    await push('addMeta',{nome:slug, label:nome, saldo_atual:String(saldoVal), meta:String(metaVal), cor:color});
+    saveLocal();
+    closeModal('mMetaEdit');
+    renderGoals();
+    pushBg('addMeta',{nome:slug, label:nome, saldo_atual:String(saldoVal), meta:String(metaVal), cor:color});
   }
-  saveLocal();
-  btnLoading(btn, false);
-  closeModal('mMetaEdit');
-  renderGoals();
 }
 
-async function arquivarMeta(nome){
+function arquivarMeta(nome){
   if(!confirm(`Arquivar a caixinha "${nome}"? Ela ficará oculta mas os dados serão mantidos.`)) return;
   const g = STATE.metas.find(m=>m.nome===nome);
   if(!g) return;
   g.archived = true;
   saveLocal();
-  await push('updateMeta',{nome, arquivado:'sim', saldo:String(g.saldo), data:STATE.saldoDate});
   renderGoals();
+  pushBg('updateMeta',{nome, arquivado:'sim', saldo:String(g.saldo), data:STATE.saldoDate});
 }
 
-async function desarquivarMeta(nome){
+function desarquivarMeta(nome){
   const g = STATE.metas.find(m=>m.nome===nome);
   if(!g) return;
   g.archived = false;
   saveLocal();
-  await push('updateMeta',{nome, arquivado:'nao', saldo:String(g.saldo), data:STATE.saldoDate});
   renderGoals();
+  pushBg('updateMeta',{nome, arquivado:'nao', saldo:String(g.saldo), data:STATE.saldoDate});
 }
 
-async function excluirMeta(nome){
+function excluirMeta(nome){
   if(!confirm('Excluir esta caixinha definitivamente? Esta ação não pode ser desfeita.')) return;
   if(!confirm('Tem certeza? Todos os dados desta caixinha serão perdidos permanentemente.')) return;
   STATE.metas = STATE.metas.filter(m=>m.nome!==nome);
   saveLocal();
-  await push('deleteMeta',{nome});
   renderGoals();
+  pushBg('deleteMeta',{nome});
 }
 
 function togglePrivacy(){
