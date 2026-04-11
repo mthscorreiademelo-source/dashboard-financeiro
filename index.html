@@ -1560,6 +1560,8 @@ function onCatChange(v){
 }
 
 async function submitLanc(){
+  const btn = getSubmitBtn('mLanc');
+  if(btn && btn.disabled) return;
   const valor=parseFloat(document.getElementById('lValor').value);
   const data=document.getElementById('lData').value;
   const hora=document.getElementById('lHora').value||'';
@@ -1576,6 +1578,7 @@ async function submitLanc(){
     STATE.categorias.push(nova);
     await push('addCategoria',nova);
   }
+  btnLoading(btn, true);
   const mes=mesKey(data);
   const id='l'+Date.now()+Math.floor(Math.random()*1000);
   const lanc={id,data,hora,tipo:lancTipo,descricao:desc,categoria:cat,valor,mes,origem:'manual'};
@@ -1586,6 +1589,7 @@ async function submitLanc(){
   saveLocal();
   await push('addLancamento',{...lanc,valor:String(valor)});
   await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  btnLoading(btn, false);
   closeModal('mLanc');
   renderAll();
 }
@@ -1606,6 +1610,8 @@ function openMeta(nome,acao){
 }
 
 async function submitMeta(){
+  const btn = document.getElementById('mMetaBtn');
+  if(btn && btn.disabled) return;
   const valor=parseFloat(document.getElementById('mValor').value);
   const data=document.getElementById('mData').value;
   const desc=document.getElementById('mDesc').value.trim();
@@ -1621,6 +1627,7 @@ async function submitMeta(){
     meta.saldo=Math.round((meta.saldo-valor)*100)/100;
     STATE.saldo=Math.round((STATE.saldo+valor)*100)/100;
   }
+  btnLoading(btn, true);
   STATE.saldoDate=fmtD(data);
   const catLabel=metaAcao==='guardar'?`Depósito → ${meta.label}`:`Retirada ← ${meta.label}`;
   const lanc={id:'m'+Date.now(),data,tipo:metaAcao==='guardar'?'saida':'entrada',descricao:desc||catLabel,categoria:catLabel,valor,mes:mesKey(data),origem:'caixinha'};
@@ -1629,6 +1636,7 @@ async function submitMeta(){
   await push('updateMeta',{nome:meta.nome,saldo:String(meta.saldo),data:STATE.saldoDate});
   await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
   await push('addLancamento',{...lanc,valor:String(valor)});
+  btnLoading(btn, false);
   closeModal('mMeta');
   renderAll();
 }
@@ -1662,6 +1670,8 @@ function editBack(){
   document.getElementById('eActs2').style.display='none';
 }
 async function editStep2(){
+  const btn = document.getElementById('eActs2')?.querySelector('.btn-blue');
+  if(btn && btn.disabled) return;
   const id=document.getElementById('eId').value;
   const l=STATE.lancamentos.find(l=>l.id===id);
   if(!l)return;
@@ -1675,9 +1685,11 @@ async function editStep2(){
   if(l.tipo==='entrada') STATE.saldo=Math.round((STATE.saldo+nv)*100)/100;
   else STATE.saldo=Math.round((STATE.saldo-nv)*100)/100;
   l.data=nd; l.valor=nv; l.descricao=ndesc; l.categoria=ncat; l.mes=mesKey(nd);
+  btnLoading(btn, true);
   saveLocal();
   await push('editLancamento',{id,data:nd,tipo:l.tipo,descricao:ndesc,categoria:ncat,valor:String(nv),mes:l.mes});
   await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  btnLoading(btn, false);
   closeModal('mEdit');
   renderAll();
 }
@@ -1699,6 +1711,8 @@ function delStep2(){
   document.getElementById('delStep2').style.display='block';
 }
 async function delConfirm(){
+  const btn = document.getElementById('delStep2')?.querySelector('.btn-red');
+  if(btn && btn.disabled) return;
   const id=pendingDelId;
   const l=STATE.lancamentos.find(l=>l.id===id);
   if(l){
@@ -1706,9 +1720,11 @@ async function delConfirm(){
     else STATE.saldo=Math.round((STATE.saldo+l.valor)*100)/100;
   }
   STATE.lancamentos=STATE.lancamentos.filter(l=>l.id!==id);
+  btnLoading(btn, true);
   saveLocal();
   await push('delLancamento',{id});
   await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  btnLoading(btn, false);
   closeModal('mDel');
   renderAll();
 }
@@ -1923,6 +1939,8 @@ function openEditAgenda(id){
 }
 
 async function submitAgenda(){
+  const btn = getSubmitBtn('mAgenda');
+  if(btn && btn.disabled) return;
   const nome  = document.getElementById('agNome').value.trim();
   const valor = parseFloat(document.getElementById('agValor').value)||0;
   const cat   = document.getElementById('agCat').value;
@@ -1934,6 +1952,7 @@ async function submitAgenda(){
   const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
   const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(parseFloat(document.getElementById('agParcela').value)||0):0;
   if(!nome){ alert('Digite o nome'); return; }
+  btnLoading(btn, true);
   const payload = {
     tipo, nome, descricao:desc, categoria:cat,
     valor:String(valor), valor_parcela:String(parcela),
@@ -1951,6 +1970,7 @@ async function submitAgenda(){
     await push('addAgenda',{id:newId,...payload});
   }
   saveLocal();
+  btnLoading(btn, false);
   closeModal('mAgenda');
   renderAgenda();
   renderKPI();
@@ -1971,6 +1991,8 @@ function openPagar(id){
 }
 
 async function submitPagar(){
+  const btn = getSubmitBtn('mPagar');
+  if(btn && btn.disabled) return;
   const id    = document.getElementById('pgId').value;
   const data  = document.getElementById('pgData').value;
   const valor = parseFloat(document.getElementById('pgValor').value);
@@ -1980,27 +2002,26 @@ async function submitPagar(){
   if(!valor||valor<=0){ alert('Digite um valor válido'); return; }
   const item = STATE.agenda.find(a=>a.id===id);
   if(!item) return;
+  btnLoading(btn, true);
   const mes = mesKey(data);
-  // Calcula próxima data para recorrentes
   let proxima = '';
   if(item.tipo !== 'unico'){
     const dia = parseInt(item.dia_vencimento)||1;
     const d = new Date(data);
     proxima = dsFromDate(new Date(d.getFullYear(), d.getMonth()+1, dia));
   }
-  // Cria lançamento local
   const lancId = 'ag'+Date.now();
   const lanc = {id:lancId,data,tipo:'saida',descricao:desc||nome,categoria:cat,valor,mes,origem:'agenda'};
   STATE.lancamentos.push(lanc);
   STATE.saldo = Math.round((STATE.saldo - valor)*100)/100;
   STATE.saldoDate = fmtD(data);
-  // Atualiza item na agenda
   item.ultima_confirmacao = data;
   item.proxima_data = proxima;
   if(item.tipo === 'unico') item.status = 'concluido';
   saveLocal();
   await push('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima});
   await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  btnLoading(btn, false);
   closeModal('mPagar');
   renderAll();
 }
@@ -2033,8 +2054,25 @@ async function delAgendaItem(id){
   renderAgenda();
 }
 
-// ═══════════════════════════════════════
-// UTILS
+// ── BOTÃO COM LOADING — evita cliques múltiplos ──
+function btnLoading(btnEl, loading, originalText){
+  if(!btnEl) return;
+  btnEl.disabled = loading;
+  btnEl.style.opacity = loading ? '0.6' : '1';
+  btnEl.style.cursor = loading ? 'wait' : '';
+  if(loading){
+    btnEl.dataset.origText = btnEl.textContent;
+    btnEl.textContent = '⏳ Aguarde...';
+  } else {
+    btnEl.textContent = originalText || btnEl.dataset.origText || btnEl.textContent;
+  }
+}
+
+function getSubmitBtn(modalId){
+  const modal = document.getElementById(modalId);
+  if(!modal) return null;
+  return modal.querySelector('.btn-blue, .btn-green, .btn-red');
+}
 // ═══════════════════════════════════════
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
