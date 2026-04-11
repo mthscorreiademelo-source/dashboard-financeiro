@@ -615,6 +615,21 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi" type="number" id="agValor" placeholder="0,00" step="0.01" min="0"/></div>
     <div class="fg"><label class="fl">Categoria</label><select class="fi" id="agCat"></select></div>
     <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="agDesc" placeholder="Observações..."/></div>
+    <div class="fg" id="agPeriodGrp" style="display:none;">
+      <label class="fl">Periodicidade</label>
+      <select class="fi" id="agPeriod" onchange="onPeriodChange(this.value)">
+        <option value="mensal">Mensal</option>
+        <option value="trimestral">Trimestral (a cada 3 meses)</option>
+        <option value="semestral">Semestral (a cada 6 meses)</option>
+        <option value="anual">Anual</option>
+        <option value="parcelado_12x">Parcelado em 12x</option>
+      </select>
+    </div>
+    <div class="fg" id="agParcelaGrp" style="display:none;">
+      <label class="fl">Valor da parcela mensal (R$)</label>
+      <input class="fi" type="number" id="agParcela" placeholder="0,00" step="0.01" min="0"/>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">O valor principal é o total cobrado. A parcela é o custo mensal equivalente.</div>
+    </div>
     <div class="fg" id="agDiaGrp">
       <label class="fl">Dia do vencimento (1–31)</label>
       <input class="fi" type="number" id="agDia" min="1" max="31" placeholder="Ex: 10"/>
@@ -798,6 +813,8 @@ async function syncData(){
         descricao:   String(a.descricao||''),
         categoria:   String(a.categoria||''),
         valor:       parseFloat(a.valor)||0,
+        valor_parcela: parseFloat(a.valor_parcela)||0,
+        periodicidade: String(a.periodicidade||'mensal'),
         dia_vencimento: String(a.dia_vencimento||''),
         data_unica:  String(a.data_unica||''),
         recorrente:  String(a.recorrente||'sim'),
@@ -866,6 +883,32 @@ function getCatsForMonth(m){
     map[l.categoria].items.push(l);
   });
   return Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
+}
+
+// Retorna itens da agenda programados para um mês específico (não pagos)
+function getAgendaForMonth(m){
+  const todayStr = today();
+  const [year,mon] = m.split('-').map(Number);
+  return STATE.agenda.filter(a => {
+    if(a.status === 'cancelado' || a.status === 'concluido' || a.status === 'pausado') return false;
+    if(a.tipo === 'unico'){
+      return a.data_unica && a.data_unica.slice(0,7) === m && a.data_unica >= todayStr;
+    }
+    // Recorrente/assinatura — calcula se vence neste mês
+    const dia = parseInt(a.dia_vencimento)||1;
+    const vencimento = `${m}-${String(dia).padStart(2,'0')}`;
+    // Já foi pago este mês?
+    if(a.ultima_confirmacao && a.ultima_confirmacao.slice(0,7) === m) return false;
+    // Vencimento é este mês e ainda não passou (ou passou mas não foi pago)?
+    const mesAtual = todayStr.slice(0,7);
+    if(m > mesAtual) return true; // mês futuro — sempre mostra
+    if(m === mesAtual) return vencimento >= todayStr; // mês atual — só se não passou
+    return false;
+  });
+}
+
+function sumAgendaMonth(m){
+  return getAgendaForMonth(m).reduce((s,a)=>s+a.valor,0);
 }
 
 function getDataForAI(){
@@ -1037,43 +1080,41 @@ function renderKPI(){
   const aE=months.reduce((s,m)=>s+sumOut(m),0);
   const aB=aI-aE;
   const avg=months.length?aE/months.length:0;
-  const labels=['Total de receitas','Total de despesas','Saldo do período','Gasto médio mensal'];
-  const vals=[BRL(aI),BRL(aE),BRL(aB),BRL(avg)];
-  const colors=['g','r',aB>=0?'g':'r','a'];
-  const subs=[`${months.length} meses`,`${months.length} meses`,aB>=0?'positivo':'negativo',`${months.length} meses`];
-  document.getElementById('kpiGrid').innerHTML=labels.map((lb,i)=>`
-    <div class="kpi ${colors[i]}">
-      <div class="kpi-label">${lb}</div>
-      <div class="kpi-val sv">${vals[i]}</div>
-      <div class="kpi-sub">${subs[i]}</div>
-    </div>`).join('');
+  const mesAtual=today().slice(0,7);
+  const programado=sumAgendaMonth(mesAtual);
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi g"><div class="kpi-label">Total de receitas</div><div class="kpi-val sv">${BRL(aI)}</div><div class="kpi-sub">${months.length} meses</div></div>
+    <div class="kpi r"><div class="kpi-label">Total de despesas</div><div class="kpi-val sv">${BRL(aE)}</div><div class="kpi-sub">${months.length} meses</div></div>
+    <div class="kpi ${aB>=0?'g':'r'}"><div class="kpi-label">Saldo do período</div><div class="kpi-val sv">${BRL(aB)}</div><div class="kpi-sub">${aB>=0?'positivo':'negativo'}</div></div>
+    <div class="kpi a"><div class="kpi-label">Gasto médio mensal</div><div class="kpi-val sv">${BRL(avg)}</div><div class="kpi-sub">média ${months.length} meses</div></div>
+    ${programado>0?`<div class="kpi" style="border-color:rgba(148,163,184,.25);background:var(--surface);grid-column:1/-1;"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><div class="kpi-label">Programado este mês (pendente)</div><div class="kpi-val sv" style="color:#94a3b8">${BRL(programado)}</div><div class="kpi-sub">ainda não pago — ${getAgendaForMonth(mesAtual).length} item(ns)</div></div><div style="font-size:11px;color:var(--text3);max-width:220px;text-align:right;">Valores da agenda ainda não confirmados como pagos</div></div></div>`:''}
+  `;
 }
 
 // ═══════════════════════════════════════
 // CHART
 // ═══════════════════════════════════════
 function renderChart(){
-  const months=getMonths();
-  if(!months.length){ if(chartInst){chartInst.destroy();chartInst=null;} return; }
-  const labels=months.map(m=>monthLabel(m));
-  const incs=months.map(m=>sumIn(m));
-  const exps=months.map(m=>sumOut(m));
-  const metas=months.map(m=>sumMeta(m));
+  const labels=ALL_MONTHS.map(m=>monthLabel(m).replace(' 2026',''));
+  const incs=ALL_MONTHS.map(m=>sumIn(m));
+  const exps=ALL_MONTHS.map(m=>sumOut(m));
+  const metas=ALL_MONTHS.map(m=>sumMeta(m));
+  const prog=ALL_MONTHS.map(m=>sumAgendaMonth(m));
   const hasMeta=metas.some(v=>v>0);
+  const hasProg=prog.some(v=>v>0);
   if(chartInst) chartInst.destroy();
   const datasets=[
-    {label:'Receitas',data:incs,backgroundColor:'rgba(52,211,153,.65)',borderRadius:5},
-    {label:'Despesas',data:exps,backgroundColor:'rgba(248,113,113,.65)',borderRadius:5},
+    {label:'Receitas', data:incs, backgroundColor:'rgba(52,211,153,.65)', borderRadius:5},
+    {label:'Despesas', data:exps, backgroundColor:'rgba(248,113,113,.65)', borderRadius:5},
   ];
-  if(hasMeta){
-    datasets.push({label:'Aportes em metas',data:metas,backgroundColor:'rgba(96,165,250,.65)',borderRadius:5});
-  }
+  if(hasMeta) datasets.push({label:'Aportes em metas', data:metas, backgroundColor:'rgba(96,165,250,.65)', borderRadius:5});
+  if(hasProg) datasets.push({label:'Programado', data:prog, backgroundColor:'rgba(148,163,184,.4)', borderRadius:5, borderColor:'rgba(148,163,184,.6)', borderWidth:1});
   chartInst=new Chart(document.getElementById('chartMain'),{
     type:'bar',
     data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{display:hasMeta,labels:{color:'#9090a0',font:{size:11},boxWidth:12,padding:16}},
+        legend:{display:hasMeta||hasProg,labels:{color:'#9090a0',font:{size:11},boxWidth:12,padding:16}},
         tooltip:{callbacks:{label:ctx=>privOn?' ••••':` ${ctx.dataset.label}: ${BRL(ctx.raw)}`}}
       },
       scales:{
@@ -1113,6 +1154,8 @@ function renderMonthContent(m){
   const hasData=ins.length>0||cats.length>0;
   const future=isFutureMonth(m);
   const emptyMsg=future?'Aguardando lançamentos':'Sem lançamentos este mês';
+  const agendaItems=getAgendaForMonth(m);
+  const totalProg=agendaItems.reduce((s,a)=>s+a.valor,0);
 
   el.innerHTML=`
     <div class="two-col" style="margin-bottom:12px;">
@@ -1125,8 +1168,9 @@ function renderMonthContent(m){
       <div class="card"><h3>Balanço</h3>
         ${hasData
           ? `<div class="rl"><span class="lb">Receita total</span><span class="vl g sv">+${BRL(inc)}</span></div>
-             <div class="rl"><span class="lb">Despesas totais</span><span class="vl r sv">−${BRL(exp)}</span></div>
-             <div class="rl total"><span>Saldo</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>`
+             <div class="rl"><span class="lb">Despesas reais</span><span class="vl r sv">−${BRL(exp)}</span></div>
+             ${totalProg>0?`<div class="rl"><span class="lb" style="color:#94a3b8">Programado</span><span class="vl sv" style="color:#94a3b8">−${BRL(totalProg)}</span></div>`:''}
+             <div class="rl total"><span>Saldo${totalProg>0?' (sem programado)':''}</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>`
           : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
         }
       </div>
@@ -1149,7 +1193,30 @@ function renderMonthContent(m){
           }).join('')}</div>`
         : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
       }
-    </div>`;
+    </div>
+    ${agendaItems.length?`
+    <div class="card" style="margin-top:12px;border-color:rgba(148,163,184,.2);border-style:dashed;">
+      <h3 style="color:#94a3b8;">Pagamentos programados — ${BRL(totalProg)}</h3>
+      <div class="cat-list">
+        ${agendaItems.map(a=>{
+          const dia=a.tipo==='unico'?fmtD(a.data_unica):`dia ${a.dia_vencimento}`;
+          const periLabel=a.tipo==='assinatura'?` · ${periLabel_(a.periodicidade)}`:'';
+          const color=getCatColor(a.categoria);
+          return `<div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--rs);opacity:.8;">
+            <span class="cdot" style="background:#94a3b8;border:1px dashed #94a3b8;background:transparent;"></span>
+            <span style="flex:1;font-size:13px;color:var(--text2);">${a.nome}</span>
+            <span style="font-size:11px;color:var(--text3);">${dia}${periLabel}</span>
+            <span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3);">${a.categoria}</span>
+            <span style="font-size:12px;color:#94a3b8;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;">−${BRL(a.valor)}</span>
+            <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="openPagar('${a.id}')">Pagar</button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:''}`;
+}
+
+function periLabel_(p){
+  return {mensal:'Mensal',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual','parcelado_12x':'Parcelado 12x'}[p]||p;
 }
 
 // ═══════════════════════════════════════
@@ -1726,18 +1793,23 @@ function renderAgendaSection(elId, items, emptyMsg){
   el.innerHTML = sorted.map(item => {
     const st = getStatusItem(item);
     const proxima = getProximaDataItem(item);
-    const stLabel = {
-      hoje:'Vence hoje',futuro:'Agendado',vencido:'Vencido',pausado:'Pausado'
-    }[st]||'';
-    const stColor = {
-      hoje:'var(--amber)',futuro:'var(--text3)',vencido:'var(--red)',pausado:'var(--text3)'
-    }[st]||'var(--text3)';
-    const stBg = {
-      hoje:'var(--adim)',futuro:'var(--surface2)',vencido:'var(--rdim)',pausado:'var(--surface2)'
-    }[st]||'var(--surface2)';
-    const diaInfo = item.tipo==='unico'
-      ? (proxima ? `Data: ${fmtD(proxima)}` : '—')
-      : `Vence dia ${item.dia_vencimento}${proxima?' · próx: '+fmtD(proxima):''}`;
+    const stLabel = {hoje:'Vence hoje',futuro:'Agendado',vencido:'Vencido',pausado:'Pausado'}[st]||'';
+    const stColor = {hoje:'var(--amber)',futuro:'var(--text3)',vencido:'var(--red)',pausado:'var(--text3)'}[st]||'var(--text3)';
+    const stBg    = {hoje:'var(--adim)',futuro:'var(--surface2)',vencido:'var(--rdim)',pausado:'var(--surface2)'}[st]||'var(--surface2)';
+
+    let diaInfo = '';
+    if(item.tipo==='unico'){
+      diaInfo = proxima ? `Data: ${fmtD(proxima)}` : '—';
+    } else if(item.tipo==='assinatura'){
+      const periStr = periLabel_(item.periodicidade||'mensal');
+      const parcelaInfo = item.periodicidade==='parcelado_12x'&&item.valor_parcela>0
+        ? ` · parcela ${BRL(item.valor_parcela)}/mês` : '';
+      diaInfo = `${periStr} · dia ${item.dia_vencimento}${parcelaInfo}`;
+      if(proxima) diaInfo += ` · próximo: ${fmtD(proxima)}`;
+    } else {
+      diaInfo = `Vence dia ${item.dia_vencimento}${proxima?' · próx: '+fmtD(proxima):''}`;
+    }
+
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--border);flex-wrap:wrap;">
       <div style="flex:1;min-width:140px;">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${item.nome}</div>
@@ -1770,10 +1842,17 @@ function openAgendaModal(tipo){
   document.getElementById('agDesc').value = '';
   document.getElementById('agDia').value = '';
   document.getElementById('agData').value = today();
+  document.getElementById('agParcela').value = '';
   populateCatSel('agCat');
   document.getElementById('agDiaGrp').style.display  = tipo==='unico'?'none':'block';
   document.getElementById('agDataGrp').style.display = tipo==='unico'?'block':'none';
+  document.getElementById('agPeriodGrp').style.display = tipo==='assinatura'?'block':'none';
+  document.getElementById('agParcelaGrp').style.display = 'none';
   openModal('mAgenda');
+}
+
+function onPeriodChange(val){
+  document.getElementById('agParcelaGrp').style.display = val==='parcelado_12x'?'block':'none';
 }
 
 function openEditAgenda(id){
@@ -1789,10 +1868,16 @@ function openEditAgenda(id){
   document.getElementById('agDesc').value = item.descricao;
   document.getElementById('agDia').value = item.dia_vencimento;
   document.getElementById('agData').value = item.data_unica||today();
+  document.getElementById('agParcela').value = item.valor_parcela||'';
   populateCatSel('agCat');
   document.getElementById('agCat').value = item.categoria;
   document.getElementById('agDiaGrp').style.display  = item.tipo==='unico'?'none':'block';
   document.getElementById('agDataGrp').style.display = item.tipo==='unico'?'block':'none';
+  document.getElementById('agPeriodGrp').style.display = item.tipo==='assinatura'?'block':'none';
+  if(item.tipo==='assinatura'){
+    document.getElementById('agPeriod').value = item.periodicidade||'mensal';
+    document.getElementById('agParcelaGrp').style.display = item.periodicidade==='parcelado_12x'?'block':'none';
+  }
   openModal('mAgenda');
 }
 
@@ -1805,16 +1890,21 @@ async function submitAgenda(){
   const data  = document.getElementById('agData').value;
   const id    = document.getElementById('agId').value;
   const tipo  = document.getElementById('agTipoHidden').value;
+  const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
+  const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(parseFloat(document.getElementById('agParcela').value)||0):0;
   if(!nome){ alert('Digite o nome'); return; }
-  const payload = {tipo,nome,descricao:desc,categoria:cat,valor:String(valor),
-    dia_vencimento:dia,data_unica:data,recorrente:tipo==='unico'?'nao':'sim',status:'ativo'};
+  const payload = {
+    tipo, nome, descricao:desc, categoria:cat,
+    valor:String(valor), valor_parcela:String(parcela),
+    periodicidade:period,
+    dia_vencimento:dia, data_unica:data,
+    recorrente:tipo==='unico'?'nao':'sim', status:'ativo'
+  };
   if(id){
-    // Editar
     const item = STATE.agenda.find(a=>a.id===id);
     if(item) Object.assign(item,{...payload,id});
     await push('editAgenda',{id,...payload});
   } else {
-    // Novo
     const newId = 'a'+Date.now();
     STATE.agenda.push({id:newId,...payload,ultima_confirmacao:'',proxima_data:''});
     await push('addAgenda',{id:newId,...payload});
@@ -1822,6 +1912,8 @@ async function submitAgenda(){
   saveLocal();
   closeModal('mAgenda');
   renderAgenda();
+  renderKPI();
+  renderChart();
 }
 
 function openPagar(id){
