@@ -301,6 +301,10 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <button class="ntab t-analise" data-page="analise">Análise IA</button>
     </div>
     <div class="nav-actions">
+      <select class="icon-btn" id="yearSelector" onchange="changeYear(this.value)" style="cursor:pointer;padding:5px 10px;">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+      </select>
       <button class="icon-btn" id="syncBtn" onclick="syncData()"><span class="spinner" id="syncSpinner" style="display:none"></span><span id="syncTxt">⟳ Sync</span></button>
       <button class="icon-btn" id="privBtn" onclick="togglePrivacy()">👁 <span id="privTxt">Ocultar</span></button>
       <button class="icon-btn" onclick="showSetup()">⚙</button>
@@ -378,6 +382,11 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   <div style="padding-top:.5rem;">
     <div class="ext-filters">
       <input type="text" id="extSearch" placeholder="Buscar descrição ou categoria..." oninput="renderExtrato()"/>
+      <select id="extAno" onchange="renderExtrato()">
+        <option value="">Ano: todos</option>
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+      </select>
       <select id="extTipo" onchange="renderExtrato()">
         <option value="">Tipo: todos</option>
         <option value="entrada">Entradas</option>
@@ -700,7 +709,9 @@ const today = () => {
 };
 const mesKey = d => String(d||'').slice(0,7);
 const fmtD = s => { const p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]:s||''; };
-const ALL_MONTHS = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+const ALL_MONTHS_2026 = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+const ALL_MONTHS_2025 = ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'];
+let ALL_MONTHS = ALL_MONTHS_2026;
 const SHORT_MONTH = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
 const monthLabel = k => {
   if(!k) return '';
@@ -723,7 +734,7 @@ let STATE = {
   lancamentos: [],
   agenda: [],
 };
-let privOn=false, chartInst=null, curMonth='', curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[];
+let privOn=false, chartInst=null, curMonth='', curYear=2026, curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[];
 
 // ═══════════════════════════════════════
 // INIT
@@ -953,15 +964,19 @@ function sumAgendaMonth(m){
   return getAgendaForMonth(m).reduce((s,a) => s + (parseFloat(a.valor)||0), 0);
 }
 
-function getDataForAI(){
-  const months=getMonths();
-  const summary=months.map(m=>{
+function getDataForAI(includeAllYears=false){
+  const monthsToAnalyze = includeAllYears
+    ? [...ALL_MONTHS_2025, ...ALL_MONTHS_2026]
+    : ALL_MONTHS; // usa o ano selecionado atualmente
+  const summary=monthsToAnalyze.map(m=>{
     const inc=sumIn(m); const exp=sumOut(m); const inv=sumMeta(m);
+    if(inc===0&&exp===0&&inv===0) return null;
     const cats=getCatsForMonth(m).map(([n,d])=>n+': R$'+d.total.toFixed(2)).join(', ');
-    return `${monthLabel(m)}: receitas R$${inc.toFixed(2)}, despesas R$${exp.toFixed(2)}, aportes em metas R$${inv.toFixed(2)}, saldo R$${(inc-exp-inv).toFixed(2)}. Categorias de gastos: ${cats}`;
-  }).join('\n');
+    return `${monthLabel(m)}: receitas R$${inc.toFixed(2)}, despesas R$${exp.toFixed(2)}, aportes em metas R$${inv.toFixed(2)}, saldo R$${(inc-exp-inv).toFixed(2)}. Categorias: ${cats}`;
+  }).filter(Boolean).join('\n');
   const metas=STATE.metas.map(m=>`${m.label}: R$${m.saldo.toFixed(2)} / R$${m.meta.toFixed(2)}`).join(', ');
-  return `DADOS FINANCEIROS:\nSaldo em conta: R$${STATE.saldo.toFixed(2)}\nMetas: ${metas}\n\nRESUMO POR MÊS:\n${summary}`;
+  const anoCtx = includeAllYears ? '2025–2026' : String(curYear);
+  return `DADOS FINANCEIROS (${anoCtx}):\nSaldo em conta: R$${STATE.saldo.toFixed(2)}\nMetas: ${metas}\n\nRESUMO POR MÊS:\n${summary||'Sem dados para este período.'}`;
 }
 
 // ═══════════════════════════════════════
@@ -1113,22 +1128,19 @@ function toggleWeek(id){
 }
 
 
-// ═══════════════════════════════════════
-// KPI
-// ═══════════════════════════════════════
 function renderKPI(){
-  const months=getMonths();
-  const aI=months.reduce((s,m)=>s+sumIn(m),0);
-  const aE=months.reduce((s,m)=>s+sumOut(m),0);
+  const aI=ALL_MONTHS.reduce((s,m)=>s+sumIn(m),0);
+  const aE=ALL_MONTHS.reduce((s,m)=>s+sumOut(m),0);
   const aB=aI-aE;
-  const avg=months.length?aE/months.length:0;
+  const monthsWithData=ALL_MONTHS.filter(m=>sumIn(m)>0||sumOut(m)>0);
+  const avg=monthsWithData.length?aE/monthsWithData.length:0;
   const mesAtual=today().slice(0,7);
-  const programado=sumAgendaMonth(mesAtual);
+  const programado=curYear===2026?sumAgendaMonth(mesAtual):0;
   document.getElementById('kpiGrid').innerHTML=`
-    <div class="kpi g"><div class="kpi-label">Total de receitas</div><div class="kpi-val sv">${BRL(aI)}</div><div class="kpi-sub">${months.length} meses</div></div>
-    <div class="kpi r"><div class="kpi-label">Total de despesas</div><div class="kpi-val sv">${BRL(aE)}</div><div class="kpi-sub">${months.length} meses</div></div>
+    <div class="kpi g"><div class="kpi-label">Total de receitas</div><div class="kpi-val sv">${BRL(aI)}</div><div class="kpi-sub">${curYear}</div></div>
+    <div class="kpi r"><div class="kpi-label">Total de despesas</div><div class="kpi-val sv">${BRL(aE)}</div><div class="kpi-sub">${curYear}</div></div>
     <div class="kpi ${aB>=0?'g':'r'}"><div class="kpi-label">Saldo do período</div><div class="kpi-val sv">${BRL(aB)}</div><div class="kpi-sub">${aB>=0?'positivo':'negativo'}</div></div>
-    <div class="kpi a"><div class="kpi-label">Gasto médio mensal</div><div class="kpi-val sv">${BRL(avg)}</div><div class="kpi-sub">média ${months.length} meses</div></div>
+    <div class="kpi a"><div class="kpi-label">Gasto médio mensal</div><div class="kpi-val sv">${BRL(avg)}</div><div class="kpi-sub">${monthsWithData.length} meses com dados</div></div>
     ${programado>0?`<div class="kpi" style="border-color:rgba(148,163,184,.25);background:var(--surface);grid-column:1/-1;"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><div class="kpi-label">Programado este mês (pendente)</div><div class="kpi-val sv" style="color:#94a3b8">${BRL(programado)}</div><div class="kpi-sub">ainda não pago — ${getAgendaForMonth(mesAtual).length} item(ns)</div></div><div style="font-size:11px;color:var(--text3);max-width:220px;text-align:right;">Valores da agenda ainda não confirmados como pagos</div></div></div>`:''}
   `;
 }
@@ -1172,8 +1184,18 @@ function renderChart(){
 // ═══════════════════════════════════════
 function renderMonthTabs(){
   const el=document.getElementById('monthTabs');
-  if(!curMonth) curMonth=ALL_MONTHS[new Date().getMonth()];
-  el.innerHTML=ALL_MONTHS.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m)}</button>`).join('');
+  const yearStr = String(curYear);
+  // Default: last month with data, or current month if 2026, or December if 2025
+  if(!curMonth || !curMonth.startsWith(yearStr)){
+    if(curYear === 2026){
+      curMonth = ALL_MONTHS[new Date().getMonth()];
+    } else {
+      // Find last month with data in selected year, fallback to last month
+      const withData = ALL_MONTHS.filter(m => STATE.lancamentos.some(l=>l.mes===m));
+      curMonth = withData.length ? withData[withData.length-1] : ALL_MONTHS[11];
+    }
+  }
+  el.innerHTML=ALL_MONTHS.map(m=>`<button class="mtab${m===curMonth?' active':''}" onclick="selectMonth('${m}')">${monthLabel(m).replace(' '+yearStr,'')}</button>`).join('');
   renderMonthContent(curMonth);
 }
 
@@ -1364,11 +1386,11 @@ function renderGoals(){
 // ═══════════════════════════════════════
 function updateExtFilters(){
   const cats=[...new Set(STATE.lancamentos.map(l=>l.categoria))].sort();
-  const months=[...new Set(STATE.lancamentos.map(l=>l.mes))].sort();
+  const allMesKeys=[...new Set(STATE.lancamentos.map(l=>l.mes))].filter(Boolean).sort();
   const cSel=document.getElementById('extCat');
   const mSel=document.getElementById('extMes');
-  cSel.innerHTML='<option value="">Categoria: todas</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  mSel.innerHTML='<option value="">Mês: todos</option>'+months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if(cSel) cSel.innerHTML='<option value="">Categoria: todas</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(mSel) mSel.innerHTML='<option value="">Mês: todos</option>'+allMesKeys.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
 }
 
 function getExtFiltered(){
@@ -1376,8 +1398,10 @@ function getExtFiltered(){
   const tp=document.getElementById('extTipo')?.value||'';
   const ct=document.getElementById('extCat')?.value||'';
   const ms=document.getElementById('extMes')?.value||'';
+  const ano=document.getElementById('extAno')?.value||'';
   const sort=document.getElementById('extSort')?.value||'data_desc';
   let list=[...STATE.lancamentos].filter(l=>{
+    if(ano && !l.mes.startsWith(ano)) return false;
     if(tp==='transferencia' && !isTransfer(l)) return false;
     if(tp && tp!=='transferencia'){
       if(isTransfer(l)) return false;
@@ -1461,12 +1485,15 @@ async function gerarAnalise(tipo){
   el.className='ai-result loading';
   el.innerHTML='<span class="spinner"></span> Analisando seus dados...';
   try{
-    const dados=getDataForAI();
-    const system=`Você é um assistente financeiro pessoal especializado. Analise os dados financeiros fornecidos e gere insights práticos e personalizados em português do Brasil. Seja direto, use valores reais dos dados, e formate sua resposta com títulos e listas para facilitar a leitura. Não use markdown com asteriscos — use texto simples com quebras de linha.`;
+    // 'completa' inclui todos os anos disponíveis, outros tipos usam o ano atual
+    const includeAll = tipo === 'completa';
+    const dados=getDataForAI(includeAll);
+    const anoCtx = includeAll ? 'todos os anos disponíveis' : String(curYear);
+    const system=`Você é um assistente financeiro pessoal especializado. Analise os dados financeiros fornecidos (${anoCtx}) e gere insights práticos e personalizados em português do Brasil. Seja direto, use valores reais dos dados, e formate sua resposta com títulos e listas para facilitar a leitura. Não use markdown com asteriscos — use texto simples com quebras de linha.`;
     const prompts={
-      completa:`Faça uma análise financeira completa dos dados abaixo. Identifique padrões de gastos, pontos críticos, o que está funcionando bem, e dê 3 recomendações práticas e priorizadas.\n\n${dados}`,
-      metas:`Analise o progresso das metas de poupança e dê uma projeção realista de quando serão atingidas com base no histórico de gastos e receitas. Sugira como acelerar o progresso.\n\n${dados}`,
-      cortes:`Identifique onde é possível cortar gastos com base no histórico. Priorize os cortes por impacto financeiro e facilidade de implementação. Seja específico com valores.\n\n${dados}`,
+      completa:`Faça uma análise financeira completa dos dados abaixo (todos os períodos disponíveis). Identifique padrões de gastos, pontos críticos, o que está funcionando bem, e dê 3 recomendações práticas e priorizadas.\n\n${dados}`,
+      metas:`Analise o progresso das metas de poupança e dê uma projeção realista de quando serão atingidas com base no histórico de gastos e receitas de ${curYear}. Sugira como acelerar o progresso.\n\n${dados}`,
+      cortes:`Identifique onde é possível cortar gastos com base no histórico de ${curYear}. Priorize os cortes por impacto financeiro e facilidade de implementação. Seja específico com valores.\n\n${dados}`,
     };
     const result=await callClaude(system, prompts[tipo]||prompts.completa);
     el.className='ai-result';
@@ -1486,8 +1513,11 @@ async function sendChat(){
   chatHistory.push({role:'user',content:msg});
   addChatMsg('ai','<span class="spinner"></span> Pensando...','loading');
   try{
-    const dados=getDataForAI();
-    const system=`Você é um assistente financeiro pessoal. Responda perguntas sobre as finanças do usuário com base nos dados fornecidos. Seja conciso, use os valores reais dos dados, e responda em português do Brasil. Dados atuais:\n\n${dados}`;
+    // Detecta se a pergunta menciona 2025 para incluir dados desse ano
+    const inclui2025 = msg.includes('2025') || msg.toLowerCase().includes('ano passado') || msg.toLowerCase().includes('histórico completo');
+    const dados=getDataForAI(inclui2025);
+    const anoCtx = inclui2025 ? '2025 e 2026' : String(curYear);
+    const system=`Você é um assistente financeiro pessoal. Responda perguntas sobre as finanças do usuário com base nos dados fornecidos (${anoCtx}). Seja conciso, use os valores reais dos dados, e responda em português do Brasil. Dados:\n\n${dados}`;
     const messages=chatHistory.map(m=>({role:m.role,content:m.content}));
     const reply=await callClaude(system, null, messages);
     chatHistory.push({role:'assistant',content:reply});
@@ -2085,6 +2115,16 @@ function switchPage(p){
   document.querySelectorAll('.ntab').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id==='page-'+p));
   if(p==='agenda') renderAgenda();
+}
+
+function changeYear(year){
+  curYear = parseInt(year);
+  ALL_MONTHS = curYear === 2025 ? ALL_MONTHS_2025 : ALL_MONTHS_2026;
+  curMonth = ''; // reset so renderMonthTabs picks current month of selected year
+  renderKPI();
+  renderChart();
+  renderMonthTabs();
+  updateExtFilters();
 }
 
 function togglePrivacy(){
