@@ -888,22 +888,47 @@ function getCatsForMonth(m){
 // Retorna itens da agenda programados para um mês específico (não pagos)
 function getAgendaForMonth(m){
   const todayStr = today();
-  const [year,mon] = m.split('-').map(Number);
+  const mesAtual = todayStr.slice(0,7);
+
   return STATE.agenda.filter(a => {
     if(a.status === 'cancelado' || a.status === 'concluido' || a.status === 'pausado') return false;
+    if(m < mesAtual) return false; // nunca mostra meses passados
+
     if(a.tipo === 'unico'){
-      return a.data_unica && a.data_unica.slice(0,7) === m && a.data_unica >= todayStr;
+      if(!a.data_unica) return false;
+      return a.data_unica.slice(0,7) === m && !a.ultima_confirmacao;
     }
-    // Recorrente/assinatura — calcula se vence neste mês
+
+    // Recorrente / assinatura
+    // Se temos proxima_data definida, ela é a fonte de verdade
+    if(a.proxima_data && a.proxima_data.length >= 7){
+      const mesPróximo = a.proxima_data.slice(0,7);
+      if(mesPróximo !== m) return false;
+      // Verifica periodicidade para meses além do próximo
+      return true;
+    }
+
+    // Sem proxima_data — calcula pelo dia de vencimento
     const dia = parseInt(a.dia_vencimento)||1;
-    const vencimento = `${m}-${String(dia).padStart(2,'0')}`;
-    // Já foi pago este mês?
+    const diaStr = String(dia).padStart(2,'0');
+    const vencimentoMes = `${m}-${diaStr}`;
+
     if(a.ultima_confirmacao && a.ultima_confirmacao.slice(0,7) === m) return false;
-    // Vencimento é este mês e ainda não passou (ou passou mas não foi pago)?
-    const mesAtual = todayStr.slice(0,7);
-    if(m > mesAtual) return true; // mês futuro — sempre mostra
-    if(m === mesAtual) return vencimento >= todayStr; // mês atual — só se não passou
-    return false;
+
+    if(m === mesAtual) return vencimentoMes > todayStr; // só se ainda não passou hoje
+
+    // Mês futuro — verifica periodicidade para assinaturas não mensais
+    if(a.tipo === 'assinatura' && a.periodicidade && a.periodicidade !== 'mensal' && a.periodicidade !== 'parcelado_12x'){
+      const intervalosMes = {trimestral:3, semestral:6, anual:12};
+      const intervalo = intervalosMes[a.periodicidade] || 1;
+      const baseStr = a.ultima_confirmacao ? a.ultima_confirmacao.slice(0,7) : mesAtual;
+      const [bYear, bMon] = baseStr.split('-').map(Number);
+      const [tYear, tMon] = m.split('-').map(Number);
+      const diffMeses = (tYear - bYear)*12 + (tMon - bMon);
+      return diffMeses > 0 && diffMeses % intervalo === 0;
+    }
+
+    return true;
   });
 }
 
