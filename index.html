@@ -253,6 +253,14 @@ body.prv .sv::after{content:'••••';position:absolute;left:50%;top:50%;tr
 body.prv .saldo-valor{color:transparent!important;background:var(--surface2);border-radius:6px;position:relative;min-width:120px;display:inline-block;}
 body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--text3);font-size:1rem;letter-spacing:4px;pointer-events:none;}
 
+/* CURRENCY INPUT */
+.currency-input{ font-variant-numeric:tabular-nums; }
+
+/* COLOR SWATCHES */
+.color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+.color-swatch:hover{transform:scale(1.15);}
+.color-swatch.selected{border-color:var(--text);transform:scale(1.15);}
+
 /* MISC */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -372,8 +380,18 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 
   <!-- GOALS -->
-  <div class="sec">Metas de poupança</div>
+  <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Caixinhas de Metas</span>
+    <div style="display:flex;gap:6px;">
+      <button class="btn" style="padding:3px 11px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="openMetaEdit(null)">+ Nova caixinha</button>
+      <button class="btn btn-neu" style="padding:3px 11px;font-size:11px;" id="archivedToggleBtn" onclick="toggleArchivedMetas()">Ver arquivadas</button>
+    </div>
+  </div>
   <div class="goals-grid" id="goalsGrid"></div>
+  <div id="archivedMetas" style="display:none;margin-top:12px;">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Caixinhas arquivadas</div>
+    <div class="goals-grid" id="archivedGoalsGrid"></div>
+  </div>
 
 </div>
 
@@ -510,7 +528,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     </div>
     <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="lData"/></div>
     <div class="fg"><label class="fl">Hora (opcional)</label><input class="fi" type="time" id="lHora" placeholder="HH:MM"/></div>
-    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi" type="number" id="lValor" placeholder="0,00" step="0.01" min="0.01"/></div>
+    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi currency-input" type="text" id="lValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="lDesc" placeholder="Ex: iFood, Salário, Uber..."/></div>
     <div class="fg" id="lCatGrp">
       <label class="fl">Categoria</label>
@@ -541,7 +559,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <span class="modal-title" id="mMetaTit">Guardar na caixinha</span>
       <button class="modal-x" onclick="closeModal('mMeta')">✕</button>
     </div>
-    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi" type="number" id="mValor" placeholder="0,00" step="0.01" min="0.01"/></div>
+    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi currency-input" type="text" id="mValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="mData"/></div>
     <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="mDesc" placeholder="Ex: Aporte mensal..."/></div>
     <div class="modal-acts">
@@ -559,7 +577,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <button class="modal-x" onclick="closeModal('mEdit')">✕</button>
     </div>
     <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="eData"/></div>
-    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi" type="number" id="eValor" step="0.01"/></div>
+    <div class="fg"><label class="fl">Valor (R$)</label><input class="fi currency-input" type="text" id="eValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="eDesc"/></div>
     <div class="fg"><label class="fl">Categoria</label><select class="fi" id="eCat"></select></div>
     <input type="hidden" id="eId"/>
@@ -613,6 +631,30 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 </div>
 
+<!-- Modal: nova/editar caixinha de meta -->
+<div class="overlay" id="mMetaEdit">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="mMetaEditTit">Nova caixinha</span>
+      <button class="modal-x" onclick="closeModal('mMetaEdit')">✕</button>
+    </div>
+    <div class="fg"><label class="fl">Nome da caixinha</label><input class="fi" type="text" id="meNome" placeholder="Ex: Viagem, Carro novo, Reserva..."/></div>
+    <div class="fg"><label class="fl">Valor da meta (R$)</label><input class="fi currency-input" type="text" id="meMeta" placeholder="R$ 0,00" inputmode="decimal"/></div>
+    <div class="fg"><label class="fl">Saldo atual (R$)</label><input class="fi currency-input" type="text" id="meSaldo" placeholder="R$ 0,00" inputmode="decimal"/></div>
+    <div class="fg">
+      <label class="fl">Cor</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;" id="meColorPicker">
+        <!-- color swatches rendered by JS -->
+      </div>
+    </div>
+    <input type="hidden" id="meNomeOriginal"/>
+    <div class="modal-acts" id="meActsNormal">
+      <button class="btn btn-blue" style="flex:1" onclick="submitMetaEdit()">Salvar</button>
+      <button class="btn btn-neu" onclick="closeModal('mMetaEdit')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: agenda (adicionar/editar) -->
 <div class="overlay" id="mAgenda">
   <div class="modal">
@@ -621,7 +663,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <button class="modal-x" onclick="closeModal('mAgenda')">✕</button>
     </div>
     <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="agNome" placeholder="Ex: Hapvida, Claro, Graduação..."/></div>
-    <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi" type="number" id="agValor" placeholder="0,00" step="0.01" min="0"/></div>
+    <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi currency-input" type="text" id="agValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Categoria</label><select class="fi" id="agCat"></select></div>
     <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="agDesc" placeholder="Observações..."/></div>
     <div class="fg" id="agPeriodGrp" style="display:none;">
@@ -636,7 +678,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     </div>
     <div class="fg" id="agParcelaGrp" style="display:none;">
       <label class="fl">Valor da parcela mensal (R$)</label>
-      <input class="fi" type="number" id="agParcela" placeholder="0,00" step="0.01" min="0"/>
+      <input class="fi currency-input" type="text" id="agParcela" placeholder="R$ 0,00" inputmode="decimal"/>
       <div style="font-size:11px;color:var(--text3);margin-top:4px;">O valor principal é o total cobrado. A parcela é o custo mensal equivalente.</div>
     </div>
     <div class="fg" id="agDiaGrp">
@@ -667,7 +709,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       Confirme os dados antes de lançar no extrato. Você pode ajustar o valor real se for diferente do estimado.
     </div>
     <div class="fg"><label class="fl">Data do pagamento</label><input class="fi" type="date" id="pgData"/></div>
-    <div class="fg"><label class="fl">Valor real (R$)</label><input class="fi" type="number" id="pgValor" step="0.01" min="0.01"/></div>
+    <div class="fg"><label class="fl">Valor real (R$)</label><input class="fi currency-input" type="text" id="pgValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="pgDesc"/></div>
     <input type="hidden" id="pgId"/>
     <input type="hidden" id="pgNome"/>
@@ -734,7 +776,9 @@ let STATE = {
   lancamentos: [],
   agenda: [],
 };
-let privOn=false, chartInst=null, curMonth='', curYear=2026, curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[];
+let privOn=false, chartInst=null, curMonth='', curYear=2026, curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false;
+
+const META_COLORS = ['#34d399','#60a5fa','#f472b6','#fbbf24','#a78bfa','#fb923c','#2dd4bf','#f87171','#818cf8','#86efac','#e879f9','#94a3b8'];
 
 // ═══════════════════════════════════════
 // INIT
@@ -804,11 +848,12 @@ async function syncData(){
     // Metas
     if(d.metas&&d.metas.length){
       STATE.metas=d.metas.map(m=>({
-        nome:String(m.nome||''),
-        label:nomeToLabel(String(m.nome||'')),
-        saldo:parseFloat(m.saldo_atual)||0,
-        meta:parseFloat(m.meta)||0,
-        color:m.nome==='reserva_emergencia'?'#34d399':'#60a5fa',
+        nome:     String(m.nome||''),
+        label:    String(m.label||nomeToLabel(String(m.nome||''))),
+        saldo:    parseFloat(m.saldo_atual)||0,
+        meta:     parseFloat(m.meta)||0,
+        color:    String(m.cor||m.color||(m.nome==='reserva_emergencia'?'#34d399':'#60a5fa')),
+        archived: String(m.arquivado||'')  === 'sim',
       }));
     }
     // Categorias
@@ -1301,57 +1346,92 @@ function getGoalHistory(nome){
 }
 
 function renderGoals(){
+  const active   = STATE.metas.filter(g=>!g.archived);
+  const archived = STATE.metas.filter(g=>g.archived);
+
   const el=document.getElementById('goalsGrid');
-  if(!STATE.metas.length){
-    el.innerHTML='<div class="empty" style="padding:1rem;color:var(--text3);">Sem metas configuradas.</div>';
-    return;
-  }
-  el.innerHTML=STATE.metas.map((g,gi)=>{
-    const pct=Math.min(100,Math.round(g.saldo/g.meta*100));
-    return `<div class="goal-card">
-      <div class="goal-hdr">
-        <span class="goal-name">${g.label}</span>
-        <div class="goal-acts">
-          <button class="goal-btn save" onclick="openMeta('${g.nome}','guardar')">Guardar</button>
-          <button class="goal-btn take" onclick="openMeta('${g.nome}','retirar')">Retirar</button>
+  if(!active.length){
+    el.innerHTML='<div class="empty" style="padding:1rem;color:var(--text3);">Nenhuma caixinha ativa. Clique em "+ Nova caixinha" para começar.</div>';
+  } else {
+    el.innerHTML=active.map((g)=>{
+      const gi=STATE.metas.indexOf(g);
+      const pct=Math.min(100,Math.round(g.saldo/g.meta*100));
+      return `<div class="goal-card">
+        <div class="goal-hdr">
+          <span class="goal-name">${g.label}</span>
+          <div class="goal-acts">
+            <button class="goal-btn save" onclick="openMeta('${g.nome}','guardar')">Guardar</button>
+            <button class="goal-btn take" onclick="openMeta('${g.nome}','retirar')">Retirar</button>
+            <button class="goal-btn" style="padding:3px 8px;font-size:10px;background:var(--surface2);border-color:var(--border2);color:var(--text2);" onclick="openMetaEdit('${g.nome}')">✏</button>
+            <button class="goal-btn" style="padding:3px 8px;font-size:10px;background:var(--surface2);border-color:var(--border2);color:var(--text3);" onclick="arquivarMeta('${g.nome}')">📦</button>
+          </div>
         </div>
-      </div>
-      <div class="goal-amounts">
-        <span class="goal-cur sv" style="color:${g.color}">${BRL(g.saldo)}</span>
-        <span class="goal-tgt">meta: ${BRL(g.meta)}</span>
-      </div>
-      <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${g.color}"></div></div>
-      <div class="goal-info">${pct}% concluído · faltam ${BRL(g.meta-g.saldo)}</div>
-      <div class="goal-chart-wrap"><canvas id="goalChart_${gi}"></canvas></div>
-    </div>`;
-  }).join('');
+        <div class="goal-amounts">
+          <span class="goal-cur sv" style="color:${g.color}">${BRL(g.saldo)}</span>
+          <span class="goal-tgt">meta: ${BRL(g.meta)}</span>
+        </div>
+        <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${g.color}"></div></div>
+        <div class="goal-info">${pct}% concluído · faltam ${BRL(g.meta-g.saldo)}</div>
+        <div class="goal-chart-wrap"><canvas id="goalChart_${gi}"></canvas></div>
+      </div>`;
+    }).join('');
+  }
+
+  // Archived section
+  const archEl=document.getElementById('archivedGoalsGrid');
+  if(archEl){
+    archEl.innerHTML=archived.length ? archived.map(g=>{
+      const gi=STATE.metas.indexOf(g);
+      const pct=Math.min(100,Math.round(g.saldo/g.meta*100));
+      return `<div class="goal-card" style="opacity:.6;">
+        <div class="goal-hdr">
+          <span class="goal-name" style="color:var(--text3);">${g.label} <span style="font-size:10px;">(arquivada)</span></span>
+          <div class="goal-acts">
+            <button class="goal-btn" style="padding:3px 10px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="desarquivarMeta('${g.nome}')">Desarquivar</button>
+            <button class="goal-btn take" onclick="excluirMeta('${g.nome}')">Excluir</button>
+          </div>
+        </div>
+        <div class="goal-amounts">
+          <span class="goal-cur sv" style="color:${g.color}">${BRL(g.saldo)}</span>
+          <span class="goal-tgt">meta: ${BRL(g.meta)}</span>
+        </div>
+        <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${g.color}"></div></div>
+        <div class="goal-info">${pct}% concluído</div>
+      </div>`;
+    }).join('') : '<div class="empty" style="padding:1rem;color:var(--text3);">Nenhuma caixinha arquivada.</div>';
+  }
 
   // Render mini charts after DOM update
   setTimeout(()=>{
     STATE.metas.forEach((g,gi)=>{
+      if(g.archived) return; // skip archived
       const canvas=document.getElementById(`goalChart_${gi}`);
       if(!canvas)return;
       if(goalCharts[gi]) goalCharts[gi].destroy();
 
-      // Build monthly balance progression
-      const transfers=STATE.lancamentos.filter(l=>isTransfer(l)&&l.descricao.toLowerCase().includes(g.label.toLowerCase().split(' ')[0].toLowerCase()));
-      const monthMap={};
-      let running=0;
-      // Use all months and accumulate
-      const allM=[...new Set(STATE.lancamentos.map(l=>l.mes))].sort();
-      allM.forEach(m=>{
-        const inflow=STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='saida'&&(l.descricao+l.categoria).toLowerCase().includes(g.nome==='reserva_emergencia'?'reserva':'casa')).reduce((s,l)=>s+l.valor,0);
-        const outflow=STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='entrada'&&(l.descricao+l.categoria).toLowerCase().includes(g.nome==='reserva_emergencia'?'reserva':'casa')).reduce((s,l)=>s+l.valor,0);
-        running+=inflow-outflow;
-        monthMap[m]=Math.max(0,running);
+      const todayMes = today().slice(0,7);
+      const yearStr = String(curYear);
+
+      const currentYear = new Date().getFullYear();
+      // For current year: show Jan to current month. For past years: show all 12 months.
+      const monthsToShow = curYear < currentYear
+        ? ALL_MONTHS
+        : ALL_MONTHS.filter(m => m <= todayMes);
+
+      const keyword = g.label.toLowerCase().split(' ')[0];
+      let running = 0;
+      const data = monthsToShow.map(m=>{
+        const inflow  = STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='saida'  &&(l.descricao+l.categoria).toLowerCase().includes(keyword)).reduce((s,l)=>s+l.valor,0);
+        const outflow = STATE.lancamentos.filter(l=>isTransfer(l)&&l.mes===m&&l.tipo==='entrada'&&(l.descricao+l.categoria).toLowerCase().includes(keyword)).reduce((s,l)=>s+l.valor,0);
+        running = Math.max(0, running + inflow - outflow);
+        return running;
       });
-      // If no transfer history, just show current saldo at latest month
-      const labels=Object.keys(monthMap).map(m=>monthLabel(m));
-      const data=Object.values(monthMap);
-      if(!labels.length){
-        labels.push('Atual');
-        data.push(g.saldo);
+      // If no movements at all, leave zeroed — don't project current saldo into past years
+      if(!data.some(v=>v>0) && curYear === new Date().getFullYear() && g.saldo>0){
+        data[data.length-1] = g.saldo;
       }
+
+      const labels = monthsToShow.map(m=>monthLabel(m).replace(' '+yearStr,''));
 
       goalCharts[gi]=new Chart(canvas,{
         type:'line',
@@ -1593,7 +1673,7 @@ function onCatChange(v){
 async function submitLanc(){
   const btn = getSubmitBtn('mLanc');
   if(btn && btn.disabled) return;
-  const valor=parseFloat(document.getElementById('lValor').value);
+  const valor=getCurrencyVal('lValor');
   const data=document.getElementById('lData').value;
   const hora=document.getElementById('lHora').value||'';
   const desc=document.getElementById('lDesc').value.trim();
@@ -1643,7 +1723,7 @@ function openMeta(nome,acao){
 async function submitMeta(){
   const btn = document.getElementById('mMetaBtn');
   if(btn && btn.disabled) return;
-  const valor=parseFloat(document.getElementById('mValor').value);
+  const valor=getCurrencyVal('mValor');
   const data=document.getElementById('mData').value;
   const desc=document.getElementById('mDesc').value.trim();
   if(!valor||valor<=0){alert('Digite um valor válido');return;}
@@ -1681,7 +1761,7 @@ function openEdit(id){
   document.getElementById('eId').value=id;
   document.getElementById('eTipo').value=l.tipo;
   document.getElementById('eData').value=l.data;
-  document.getElementById('eValor').value=l.valor;
+  setCurrencyVal('eValor', l.valor);
   document.getElementById('eDesc').value=l.descricao;
   populateCatSel('eCat');
   document.getElementById('eCat').value=l.categoria;
@@ -1707,7 +1787,7 @@ async function editStep2(){
   const l=STATE.lancamentos.find(l=>l.id===id);
   if(!l)return;
   const oldV=l.valor; const oldT=l.tipo;
-  const nv=parseFloat(document.getElementById('eValor').value);
+  const nv=getCurrencyVal('eValor');
   const nd=document.getElementById('eData').value;
   const ndesc=document.getElementById('eDesc').value.trim();
   const ncat=document.getElementById('eCat').value;
@@ -1952,11 +2032,11 @@ function openEditAgenda(id){
   document.getElementById('agId').value = id;
   document.getElementById('agTipoHidden').value = item.tipo;
   document.getElementById('agNome').value = item.nome;
-  document.getElementById('agValor').value = item.valor;
+  setCurrencyVal('agValor', item.valor);
   document.getElementById('agDesc').value = item.descricao;
   document.getElementById('agDia').value = item.dia_vencimento;
   document.getElementById('agData').value = item.data_unica||today();
-  document.getElementById('agParcela').value = item.valor_parcela||'';
+  setCurrencyVal('agParcela', item.valor_parcela);
   populateCatSel('agCat');
   document.getElementById('agCat').value = item.categoria;
   document.getElementById('agDiaGrp').style.display  = item.tipo==='unico'?'none':'block';
@@ -1973,7 +2053,7 @@ async function submitAgenda(){
   const btn = getSubmitBtn('mAgenda');
   if(btn && btn.disabled) return;
   const nome  = document.getElementById('agNome').value.trim();
-  const valor = parseFloat(document.getElementById('agValor').value)||0;
+  const valor = getCurrencyVal('agValor');
   const cat   = document.getElementById('agCat').value;
   const desc  = document.getElementById('agDesc').value.trim();
   const dia   = document.getElementById('agDia').value;
@@ -1981,7 +2061,7 @@ async function submitAgenda(){
   const id    = document.getElementById('agId').value;
   const tipo  = document.getElementById('agTipoHidden').value;
   const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
-  const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(parseFloat(document.getElementById('agParcela').value)||0):0;
+  const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(getCurrencyVal('agParcela')):0;
   if(!nome){ alert('Digite o nome'); return; }
   btnLoading(btn, true);
   const payload = {
@@ -2015,7 +2095,7 @@ function openPagar(id){
   document.getElementById('pgNome').value = item.nome;
   document.getElementById('pgCat').value = item.categoria;
   document.getElementById('pgData').value = today();
-  document.getElementById('pgValor').value = item.valor||'';
+  setCurrencyVal('pgValor', item.valor);
   document.getElementById('pgDesc').value = item.nome;
   document.getElementById('mPagarTit').textContent = `Pagar: ${item.nome}`;
   openModal('mPagar');
@@ -2026,7 +2106,7 @@ async function submitPagar(){
   if(btn && btn.disabled) return;
   const id    = document.getElementById('pgId').value;
   const data  = document.getElementById('pgData').value;
-  const valor = parseFloat(document.getElementById('pgValor').value);
+  const valor = getCurrencyVal('pgValor');
   const desc  = document.getElementById('pgDesc').value.trim();
   const nome  = document.getElementById('pgNome').value;
   const cat   = document.getElementById('pgCat').value;
@@ -2087,6 +2167,59 @@ async function delAgendaItem(id){
   renderAgenda();
 }
 
+// ═══════════════════════════════════════
+// MÁSCARA DE MOEDA
+// ═══════════════════════════════════════
+function parseCurrency(str){
+  if(!str) return 0;
+  const clean = String(str)
+    .replace(/R\$\s*/g,'')
+    .replace(/\s/g,'')
+    .replace(/\./g,'')   // remove thousand separators
+    .replace(',','.')     // comma → decimal point
+    .trim();
+  return parseFloat(clean)||0;
+}
+
+function formatCurrency(value){
+  const n = parseFloat(value)||0;
+  return 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function bindCurrencyInputs(){
+  // Use event delegation on document — works for dynamically opened modals
+  document.addEventListener('focus', function(e){
+    if(e.target.classList.contains('currency-input')){
+      e.target.select();
+    }
+  }, true);
+
+  document.addEventListener('blur', function(e){
+    if(!e.target.classList.contains('currency-input')) return;
+    const raw = e.target.value.trim();
+    if(!raw){ return; }
+    const n = parseCurrency(raw);
+    if(n > 0){
+      e.target.value = formatCurrency(n);
+    } else {
+      e.target.value = '';
+    }
+  }, true);
+}
+
+// Helper to get currency value from input
+function getCurrencyVal(id){
+  return parseCurrency(document.getElementById(id)?.value||'0');
+}
+
+// Helper to set currency value in input
+function setCurrencyVal(id, value){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const n = parseFloat(value)||0;
+  el.value = n > 0 ? formatCurrency(n) : '';
+}
+
 // ── BOTÃO COM LOADING — evita cliques múltiplos ──
 function btnLoading(btnEl, loading, originalText){
   if(!btnEl) return;
@@ -2120,11 +2253,124 @@ function switchPage(p){
 function changeYear(year){
   curYear = parseInt(year);
   ALL_MONTHS = curYear === 2025 ? ALL_MONTHS_2025 : ALL_MONTHS_2026;
-  curMonth = ''; // reset so renderMonthTabs picks current month of selected year
+  curMonth = '';
   renderKPI();
   renderChart();
   renderMonthTabs();
+  renderGoals();
   updateExtFilters();
+}
+
+// ═══════════════════════════════════════
+// CAIXINHAS — EDIT / CREATE / ARCHIVE
+// ═══════════════════════════════════════
+function toggleArchivedMetas(){
+  showArchived = !showArchived;
+  const el = document.getElementById('archivedMetas');
+  const btn = document.getElementById('archivedToggleBtn');
+  if(el) el.style.display = showArchived ? 'block' : 'none';
+  if(btn) btn.textContent = showArchived ? 'Ocultar arquivadas' : 'Ver arquivadas';
+}
+
+function renderColorPicker(selectedColor){
+  const el = document.getElementById('meColorPicker');
+  if(!el) return;
+  el.innerHTML = META_COLORS.map(c=>`
+    <div class="color-swatch${c===selectedColor?' selected':''}" style="background:${c};" onclick="selectMetaColor('${c}')"></div>
+  `).join('') + `
+    <input type="color" value="${selectedColor||'#888'}" id="meColorCustom" oninput="selectMetaColor(this.value)" title="Cor personalizada" style="width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid var(--border2);padding:0;">
+  `;
+  meSelectedColor = selectedColor || META_COLORS[0];
+}
+
+function selectMetaColor(color){
+  meSelectedColor = color;
+  document.querySelectorAll('#meColorPicker .color-swatch').forEach(el=>{
+    el.classList.toggle('selected', el.style.background===color||el.style.backgroundColor===color);
+  });
+  const custom = document.getElementById('meColorCustom');
+  if(custom && !META_COLORS.includes(color)) custom.value = color;
+}
+
+function openMetaEdit(nome){
+  const isNew = !nome;
+  document.getElementById('mMetaEditTit').textContent = isNew ? 'Nova caixinha' : 'Editar caixinha';
+  document.getElementById('meNomeOriginal').value = nome || '';
+  if(isNew){
+    document.getElementById('meNome').value = '';
+    document.getElementById('meMeta').value = '';
+    document.getElementById('meSaldo').value = '0';
+    renderColorPicker(META_COLORS[Math.floor(Math.random()*META_COLORS.length)]);
+  } else {
+    const g = STATE.metas.find(m=>m.nome===nome);
+    if(!g) return;
+    document.getElementById('meNome').value = g.label;
+    setCurrencyVal('meMeta', g.meta);
+    setCurrencyVal('meSaldo', g.saldo);
+    renderColorPicker(g.color);
+  }
+  openModal('mMetaEdit');
+}
+
+async function submitMetaEdit(){
+  const btn = getSubmitBtn('mMetaEdit');
+  if(btn && btn.disabled) return;
+  const nome = document.getElementById('meNome').value.trim();
+  const metaVal = getCurrencyVal('meMeta');
+  const saldoVal = getCurrencyVal('meSaldo');
+  const color = meSelectedColor || META_COLORS[0];
+  const nomeOriginal = document.getElementById('meNomeOriginal').value;
+  if(!nome){ alert('Digite o nome da caixinha'); return; }
+  btnLoading(btn, true);
+  if(nomeOriginal){
+    // Edit existing
+    const g = STATE.metas.find(m=>m.nome===nomeOriginal);
+    if(g){
+      g.label = nome;
+      g.meta = metaVal;
+      g.saldo = saldoVal;
+      g.color = color;
+      await push('updateMeta',{nome:nomeOriginal, saldo:String(saldoVal), meta:String(metaVal), label:nome, cor:color, data:STATE.saldoDate});
+    }
+  } else {
+    // New meta — create a slug from name
+    const slug = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    const newMeta = {nome:slug, label:nome, saldo:saldoVal, meta:metaVal, color, archived:false};
+    STATE.metas.push(newMeta);
+    await push('addMeta',{nome:slug, label:nome, saldo_atual:String(saldoVal), meta:String(metaVal), cor:color});
+  }
+  saveLocal();
+  btnLoading(btn, false);
+  closeModal('mMetaEdit');
+  renderGoals();
+}
+
+async function arquivarMeta(nome){
+  if(!confirm(`Arquivar a caixinha "${nome}"? Ela ficará oculta mas os dados serão mantidos.`)) return;
+  const g = STATE.metas.find(m=>m.nome===nome);
+  if(!g) return;
+  g.archived = true;
+  saveLocal();
+  await push('updateMeta',{nome, arquivado:'sim', saldo:String(g.saldo), data:STATE.saldoDate});
+  renderGoals();
+}
+
+async function desarquivarMeta(nome){
+  const g = STATE.metas.find(m=>m.nome===nome);
+  if(!g) return;
+  g.archived = false;
+  saveLocal();
+  await push('updateMeta',{nome, arquivado:'nao', saldo:String(g.saldo), data:STATE.saldoDate});
+  renderGoals();
+}
+
+async function excluirMeta(nome){
+  if(!confirm('Excluir esta caixinha definitivamente? Esta ação não pode ser desfeita.')) return;
+  if(!confirm('Tem certeza? Todos os dados desta caixinha serão perdidos permanentemente.')) return;
+  STATE.metas = STATE.metas.filter(m=>m.nome!==nome);
+  saveLocal();
+  await push('deleteMeta',{nome});
+  renderGoals();
 }
 
 function togglePrivacy(){
@@ -2151,6 +2397,7 @@ document.querySelectorAll('.rtab[data-rt]').forEach(b=>b.addEventListener('click
 // START
 // ═══════════════════════════════════════
 setSyncStatus('off');
+bindCurrencyInputs();
 init();
 </script>
 </body>
