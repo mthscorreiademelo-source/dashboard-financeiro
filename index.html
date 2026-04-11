@@ -821,6 +821,7 @@ async function syncData(){
         ultima_confirmacao: String(a.ultima_confirmacao||''),
         status:      String(a.status||'ativo'),
         proxima_data: String(a.proxima_data||''),
+        calendar_event_id: String(a.calendar_event_id||''),
       }));
     }
     saveLocal();
@@ -2048,9 +2049,11 @@ async function submitAdiar(){
 
 async function delAgendaItem(id){
   if(!confirm('Excluir este item da agenda?')) return;
+  const item = STATE.agenda.find(a=>a.id===id);
+  const calId = item?.calendar_event_id || '';
   STATE.agenda = STATE.agenda.filter(a=>a.id!==id);
   saveLocal();
-  await push('delAgenda',{id});
+  await push('delAgenda',{id, calendar_event_id: calId});
   renderAgenda();
 }
 
