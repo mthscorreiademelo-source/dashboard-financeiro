@@ -32,6 +32,7 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .ntab.active{background:var(--surface2);color:var(--text);font-weight:500;}
 .ntab.active.t-extrato{background:var(--bdim);color:var(--blue);}
 .ntab.active.t-analise{background:var(--adim);color:var(--amber);}
+.ntab.active.t-agenda{background:rgba(45,212,191,.1);color:var(--teal);}
 .nav-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
 .icon-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .icon-btn:hover{border-color:var(--border2);color:var(--text);}
@@ -256,6 +257,35 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+/* DAY SUMMARY ROW (últimos 7 dias) */
+.day-sum-row{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.day-sum-row:last-child{border-bottom:none;}
+.day-sum-label{min-width:110px;color:var(--text2);}
+.day-sum-vals{display:flex;gap:10px;flex:1;flex-wrap:wrap;}
+.day-sum-inc{color:var(--green);font-variant-numeric:tabular-nums;}
+.day-sum-exp{color:var(--red);font-variant-numeric:tabular-nums;}
+.day-sum-inv{color:var(--blue);font-variant-numeric:tabular-nums;}
+.day-sum-none{color:var(--text3);font-style:italic;}
+
+/* WEEK ACCORDION (este mês) */
+.week-block{border-bottom:1px solid var(--border);}
+.week-block:last-child{border-bottom:none;}
+.week-hdr{display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--rs);}
+.week-hdr:hover{background:var(--surface2);}
+.week-arrow{font-size:11px;color:var(--text3);transition:transform .2s;width:14px;text-align:center;}
+.week-arrow.open{transform:rotate(90deg);}
+.week-range{flex:1;font-size:12px;font-weight:500;color:var(--text2);}
+.week-vals{display:flex;gap:10px;flex-wrap:wrap;}
+.week-inc{color:var(--green);font-size:12px;font-variant-numeric:tabular-nums;}
+.week-exp{color:var(--red);font-size:12px;font-variant-numeric:tabular-nums;}
+.week-inv{color:var(--blue);font-size:12px;font-variant-numeric:tabular-nums;}
+.week-days{display:none;padding:2px 0 4px 22px;border-top:1px solid var(--border);}
+.week-days.open{display:block;}
+.week-day-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.week-day-row:last-child{border-bottom:none;}
+.week-day-label{min-width:110px;color:var(--text3);}
+.week-day-vals{display:flex;gap:10px;flex:1;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -267,6 +297,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="nav-tabs">
       <button class="ntab active" data-page="dashboard">Dashboard</button>
       <button class="ntab t-extrato" data-page="extrato">Extrato</button>
+      <button class="ntab t-agenda" data-page="agenda">Agenda</button>
       <button class="ntab t-analise" data-page="analise">Análise IA</button>
     </div>
     <div class="nav-actions">
@@ -308,7 +339,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="recentes-bar">
       <div class="rtabs">
         <button class="rtab active" data-rt="hoje">Hoje</button>
-        <button class="rtab" data-rt="semana">Esta semana</button>
+        <button class="rtab" data-rt="semana">Últimos 7 dias</button>
         <button class="rtab" data-rt="mes">Este mês</button>
         <button class="rtab link" onclick="goPage('extrato')">Ver extrato completo →</button>
       </div>
@@ -374,6 +405,43 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       </div>
       <div class="pages" id="extPages"></div>
     </div>
+  </div>
+</div>
+
+<!-- PAGE: AGENDA -->
+<div class="page" id="page-agenda">
+  <div style="padding-top:.5rem;">
+
+    <!-- Alerta de vencimentos hoje (renderizado dinamicamente) -->
+    <div id="agendaAlertHoje"></div>
+
+    <!-- Recorrentes mensais -->
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Recorrentes mensais</span>
+      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('recorrente')">+ Adicionar</button>
+    </div>
+    <div class="card" id="agendaRecorrentes">
+      <div class="empty">Nenhum recorrente cadastrado</div>
+    </div>
+
+    <!-- Agendados únicos -->
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Pagamentos agendados (únicos)</span>
+      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('unico')">+ Adicionar</button>
+    </div>
+    <div class="card" id="agendaUnicos">
+      <div class="empty">Nenhum agendamento único cadastrado</div>
+    </div>
+
+    <!-- Assinaturas -->
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Assinaturas ativas</span>
+      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('assinatura')">+ Adicionar</button>
+    </div>
+    <div class="card" id="agendaAssinaturas">
+      <div class="empty">Nenhuma assinatura cadastrada</div>
+    </div>
+
   </div>
 </div>
 
@@ -536,6 +604,73 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 </div>
 
+<!-- Modal: agenda (adicionar/editar) -->
+<div class="overlay" id="mAgenda">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="mAgendaTit">Novo item</span>
+      <button class="modal-x" onclick="closeModal('mAgenda')">✕</button>
+    </div>
+    <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="agNome" placeholder="Ex: Hapvida, Claro, Graduação..."/></div>
+    <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi" type="number" id="agValor" placeholder="0,00" step="0.01" min="0"/></div>
+    <div class="fg"><label class="fl">Categoria</label><select class="fi" id="agCat"></select></div>
+    <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="agDesc" placeholder="Observações..."/></div>
+    <div class="fg" id="agDiaGrp">
+      <label class="fl">Dia do vencimento (1–31)</label>
+      <input class="fi" type="number" id="agDia" min="1" max="31" placeholder="Ex: 10"/>
+    </div>
+    <div class="fg" id="agDataGrp" style="display:none;">
+      <label class="fl">Data do pagamento</label>
+      <input class="fi" type="date" id="agData"/>
+    </div>
+    <input type="hidden" id="agId"/>
+    <input type="hidden" id="agTipoHidden"/>
+    <div class="modal-acts">
+      <button class="btn btn-blue" style="flex:1" onclick="submitAgenda()">Salvar</button>
+      <button class="btn btn-neu" onclick="closeModal('mAgenda')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: pagar item da agenda -->
+<div class="overlay" id="mPagar">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="mPagarTit">Confirmar pagamento</span>
+      <button class="modal-x" onclick="closeModal('mPagar')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:var(--rs);">
+      Confirme os dados antes de lançar no extrato. Você pode ajustar o valor real se for diferente do estimado.
+    </div>
+    <div class="fg"><label class="fl">Data do pagamento</label><input class="fi" type="date" id="pgData"/></div>
+    <div class="fg"><label class="fl">Valor real (R$)</label><input class="fi" type="number" id="pgValor" step="0.01" min="0.01"/></div>
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="pgDesc"/></div>
+    <input type="hidden" id="pgId"/>
+    <input type="hidden" id="pgNome"/>
+    <input type="hidden" id="pgCat"/>
+    <div class="modal-acts">
+      <button class="btn btn-green" style="flex:1" onclick="submitPagar()">✓ Confirmar e lançar no extrato</button>
+      <button class="btn btn-neu" onclick="closeModal('mPagar')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: adiar -->
+<div class="overlay" id="mAdiar">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-hdr">
+      <span class="modal-title">Adiar pagamento</span>
+      <button class="modal-x" onclick="closeModal('mAdiar')">✕</button>
+    </div>
+    <div class="fg"><label class="fl">Nova data de vencimento</label><input class="fi" type="date" id="adData"/></div>
+    <input type="hidden" id="adId"/>
+    <div class="modal-acts">
+      <button class="btn" style="flex:1;background:var(--adim);border-color:var(--ab);color:var(--amber);" onclick="submitAdiar()">Adiar</button>
+      <button class="btn btn-neu" onclick="closeModal('mAdiar')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════
 // CONFIG & STATE
@@ -571,6 +706,7 @@ let STATE = {
   metas: [],
   categorias: [],
   lancamentos: [],
+  agenda: [],
 };
 let privOn=false, chartInst=null, curMonth='', curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[];
 
@@ -653,6 +789,23 @@ async function syncData(){
     if(d.categorias&&d.categorias.length){
       STATE.categorias=d.categorias.map(c=>({nome:String(c.nome||''),cor:String(c.cor||'#888'),tipo:String(c.tipo||'despesa')}));
     }
+    // Agenda
+    if(d.agenda && d.agenda.length){
+      STATE.agenda = d.agenda.map(a=>({
+        id:          String(a.id||''),
+        tipo:        String(a.tipo||'recorrente'),
+        nome:        String(a.nome||''),
+        descricao:   String(a.descricao||''),
+        categoria:   String(a.categoria||''),
+        valor:       parseFloat(a.valor)||0,
+        dia_vencimento: String(a.dia_vencimento||''),
+        data_unica:  String(a.data_unica||''),
+        recorrente:  String(a.recorrente||'sim'),
+        ultima_confirmacao: String(a.ultima_confirmacao||''),
+        status:      String(a.status||'ativo'),
+        proxima_data: String(a.proxima_data||''),
+      }));
+    }
     saveLocal();
     setSyncStatus('ok');
     renderAll();
@@ -730,6 +883,7 @@ function getDataForAI(){
 // RENDER ALL
 // ═══════════════════════════════════════
 function renderAll(){
+  processVencidos();
   renderSaldo();
   renderRecentes();
   renderKPI();
@@ -738,6 +892,7 @@ function renderAll(){
   renderGoals();
   renderExtrato();
   updateExtFilters();
+  renderAgenda();
 }
 
 // ═══════════════════════════════════════
@@ -751,35 +906,127 @@ function renderSaldo(){
 // ═══════════════════════════════════════
 // RECENTES
 // ═══════════════════════════════════════
-function renderRecentes(){
-  const now=new Date(); const todayStr=today();
-  const weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
-  const mesAtual=todayStr.slice(0,7);
-  let list=[...STATE.lancamentos].sort((a,b)=>{
-    const dc=b.data.localeCompare(a.data);
-    if(dc!==0)return dc;
-    return (b.hora||'00:00').localeCompare(a.hora||'00:00');
-  });
-  if(curRT==='hoje') list=list.filter(l=>l.data===todayStr);
-  else if(curRT==='semana') list=list.filter(l=>l.data>=weekAgo.toISOString().split('T')[0]);
-  else list=list.filter(l=>l.mes===mesAtual);
-  list=list.slice(0,12);
-  const el=document.getElementById('recList');
-  if(!list.length){el.innerHTML='<div class="empty">Nenhum lançamento neste período</div>';return;}
-  el.innerHTML=list.map(l=>{
-    const transf=isTransfer(l);
-    const valClass=transf?'':l.tipo==='entrada'?'pos':'neg';
-    const prefix=transf?'↔':l.tipo==='entrada'?'+':'-';
-    const style=transf?'color:var(--text3)':'';
-    return `<div class="rec-row" style="${transf?'opacity:.75':''}">
-      <span class="rec-date">${fmtD(l.data)}${l.hora?`<br><span style="font-size:10px;color:var(--text3)">${l.hora}</span>`:''}</span>
-      <span class="rec-desc">${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3)">↔ transferência</span>`:''}</span>
-      <span class="rec-cat">${l.categoria}</span>
-      <span class="rec-val sv ${valClass}" style="${style}">${prefix} ${BRL(l.valor)}</span>
-      <button class="rec-edit" onclick="openEdit('${l.id}')">✏</button>
-    </div>`;
-  }).join('');
+const DIAS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const DIAS_FULL = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+function dsFromDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function calcDay(ds){
+  const list=STATE.lancamentos.filter(l=>l.data===ds);
+  const inc=list.filter(l=>l.tipo==='entrada'&&!isTransfer(l)).reduce((s,l)=>s+l.valor,0);
+  const exp=list.filter(l=>l.tipo==='saida'  &&!isTransfer(l)).reduce((s,l)=>s+l.valor,0);
+  const inv=list.filter(l=>isTransfer(l)&&l.tipo==='saida').reduce((s,l)=>s+l.valor,0);
+  return {inc,exp,inv};
+}
+function valsRow(inc,exp,inv,clsInc,clsExp,clsInv){
+  const parts=[];
+  if(inc>0) parts.push(`<span class="${clsInc} sv">+${BRL(inc)}</span>`);
+  if(exp>0) parts.push(`<span class="${clsExp} sv">−${BRL(exp)}</span>`);
+  if(inv>0) parts.push(`<span class="${clsInv} sv">↔ ${BRL(inv)}</span>`);
+  return parts.length?parts.join(''):'<span style="color:var(--text3);font-style:italic;font-size:11px;">sem movimentação</span>';
+}
+
+function renderRecentes(){
+  const el=document.getElementById('recList');
+  const todayStr=today();
+
+  // ── HOJE: lista individual, mais recente primeiro ──
+  if(curRT==='hoje'){
+    const list=[...STATE.lancamentos]
+      .filter(l=>l.data===todayStr)
+      .sort((a,b)=>b.id.localeCompare(a.id));
+    if(!list.length){el.innerHTML='<div class="empty">Nenhum lançamento hoje</div>';return;}
+    el.innerHTML=list.map(l=>{
+      const transf=isTransfer(l);
+      const vc=transf?'':l.tipo==='entrada'?'pos':'neg';
+      const px=transf?'↔':l.tipo==='entrada'?'+':'-';
+      const st=transf?'color:var(--blue)':'';
+      return `<div class="rec-row" style="${transf?'opacity:.85':''}">
+        <span class="rec-date">${fmtD(l.data)}</span>
+        <span class="rec-desc">${l.descricao}</span>
+        <span class="rec-cat">${l.categoria}</span>
+        <span class="rec-val sv ${vc}" style="${st}">${px} ${BRL(l.valor)}</span>
+        <button class="rec-edit" onclick="openEdit('${l.id}')">✏</button>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // ── ÚLTIMOS 7 DIAS: compilado por dia ──
+  if(curRT==='semana'){
+    const rows=[];
+    for(let i=0;i<7;i++){
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const ds=dsFromDate(d);
+      const label=i===0?`Hoje (${fmtD(ds)})`:i===1?`Ontem (${fmtD(ds)})`:
+        `${DIAS_PT[d.getDay()]} (${fmtD(ds)})`;
+      const {inc,exp,inv}=calcDay(ds);
+      rows.push(`<div class="day-sum-row">
+        <span class="day-sum-label">${label}</span>
+        <div class="day-sum-vals">${valsRow(inc,exp,inv,'day-sum-inc','day-sum-exp','day-sum-inv')}</div>
+      </div>`);
+    }
+    el.innerHTML=rows.join('');
+    return;
+  }
+
+  // ── ESTE MÊS: semanas clicáveis (dom–sáb) ──
+  if(curRT==='mes'){
+    const now=new Date();
+    const firstDay=new Date(now.getFullYear(),now.getMonth(),1);
+    const lastDay =new Date(now.getFullYear(),now.getMonth()+1,0);
+    const weeks=[];
+    // Começa no primeiro domingo <= firstDay
+    let ws=new Date(firstDay);
+    ws.setDate(ws.getDate()-ws.getDay()); // recua para domingo
+    while(ws<=lastDay){
+      const we=new Date(ws); we.setDate(we.getDate()+6);
+      // Clamp ao mês
+      const s=ws<firstDay?new Date(firstDay):new Date(ws);
+      const e=we>lastDay ?new Date(lastDay) :new Date(we);
+      weeks.push({s,e});
+      ws=new Date(we); ws.setDate(ws.getDate()+1);
+    }
+    const rows=weeks.map((w,wi)=>{
+      const ds=dsFromDate(w.s), de=dsFromDate(w.e);
+      const range=ds===de?fmtD(ds):`${fmtD(ds)} — ${fmtD(de)}`;
+      let wInc=0,wExp=0,wInv=0;
+      const dayRows=[];
+      const cur=new Date(w.s);
+      while(cur<=w.e){
+        const cs=dsFromDate(cur);
+        const {inc,exp,inv}=calcDay(cs);
+        wInc+=inc; wExp+=exp; wInv+=inv;
+        dayRows.push(`<div class="week-day-row">
+          <span class="week-day-label">${DIAS_FULL[cur.getDay()]}, ${fmtD(cs)}</span>
+          <div class="week-day-vals">${valsRow(inc,exp,inv,'week-inc','week-exp','week-inv')}</div>
+        </div>`);
+        cur.setDate(cur.getDate()+1);
+      }
+      const wid=`wk-${wi}`;
+      return `<div class="week-block">
+        <div class="week-hdr" onclick="toggleWeek('${wid}')">
+          <span class="week-arrow" id="arr-${wid}">›</span>
+          <span class="week-range">${range}</span>
+          <div class="week-vals">${valsRow(wInc,wExp,wInv,'week-inc','week-exp','week-inv')}</div>
+        </div>
+        <div class="week-days" id="${wid}">${dayRows.join('')}</div>
+      </div>`;
+    });
+    el.innerHTML=rows.join('')||'<div class="empty">Sem movimentações este mês</div>';
+    return;
+  }
+}
+
+function toggleWeek(id){
+  const el=document.getElementById(id);
+  const arr=document.getElementById('arr-'+id);
+  if(!el)return;
+  const open=el.classList.toggle('open');
+  if(arr)arr.classList.toggle('open',open);
+}
+
 
 // ═══════════════════════════════════════
 // KPI
@@ -1377,6 +1624,283 @@ function openDetail(cat,m){
 }
 
 // ═══════════════════════════════════════
+// AGENDA
+// ═══════════════════════════════════════
+
+function calcProximaData(item){
+  const dia = parseInt(item.dia_vencimento)||1;
+  const now = new Date();
+  // Tenta este mês
+  let d = new Date(now.getFullYear(), now.getMonth(), dia);
+  if(d < now) d = new Date(now.getFullYear(), now.getMonth()+1, dia);
+  return dsFromDate(d);
+}
+
+function getStatusItem(item){
+  const todayStr = today();
+  if(item.status === 'pausado')   return 'pausado';
+  if(item.status === 'concluido') return 'concluido';
+  if(item.tipo === 'unico'){
+    if(!item.data_unica) return 'ativo';
+    if(item.data_unica < todayStr && !item.ultima_confirmacao) return 'vencido';
+    if(item.data_unica === todayStr) return 'hoje';
+    if(item.data_unica > todayStr)   return 'futuro';
+    return 'ativo';
+  }
+  // Recorrente / assinatura
+  const proxima = item.proxima_data || calcProximaData(item);
+  if(proxima < todayStr) return 'vencido';
+  if(proxima === todayStr) return 'hoje';
+  return 'futuro';
+}
+
+function getProximaDataItem(item){
+  if(item.tipo === 'unico') return item.data_unica;
+  return item.proxima_data || calcProximaData(item);
+}
+
+// Processa automaticamente itens vencidos ao abrir o dashboard
+function processVencidos(){
+  const todayStr = today();
+  // Não faz lançamento automático — só detecta e deixa para o usuário confirmar
+  // Mas atualiza proxima_data se necessário para recorrentes já confirmados
+}
+
+function renderAgenda(){
+  const todayStr = today();
+  const ativos = STATE.agenda.filter(a => a.status !== 'cancelado' && a.status !== 'concluido');
+
+  // Alerta do dia
+  const hojePagar = ativos.filter(a => {
+    const st = getStatusItem(a);
+    return st === 'hoje' || st === 'vencido';
+  });
+  const alertEl = document.getElementById('agendaAlertHoje');
+  if(hojePagar.length && document.getElementById('page-agenda').classList.contains('active')){
+    alertEl.innerHTML = `<div style="background:var(--rdim);border:1px solid var(--rb);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px;">⚠ ${hojePagar.length} pagamento(s) pendente(s) hoje</div>
+      ${hojePagar.map(a=>`<div style="font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:3px 0;">
+        <span>${a.nome}</span>
+        <span style="color:var(--red)">−${BRL(a.valor)}</span>
+      </div>`).join('')}
+    </div>`;
+  } else {
+    alertEl.innerHTML = '';
+  }
+
+  // Também mostra alerta no dashboard (hero) se houver pendências
+  renderAgendaAlertDashboard(hojePagar);
+
+  const recorrentes  = ativos.filter(a => a.tipo === 'recorrente');
+  const unicos       = ativos.filter(a => a.tipo === 'unico');
+  const assinaturas  = ativos.filter(a => a.tipo === 'assinatura');
+
+  renderAgendaSection('agendaRecorrentes',  recorrentes,  'Nenhum recorrente cadastrado');
+  renderAgendaSection('agendaUnicos',       unicos,       'Nenhum agendamento único cadastrado');
+  renderAgendaSection('agendaAssinaturas',  assinaturas,  'Nenhuma assinatura cadastrada');
+}
+
+function renderAgendaAlertDashboard(hojePagar){
+  let el = document.getElementById('agendaAlertDash');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'agendaAlertDash';
+    const hero = document.querySelector('.saldo-hero');
+    if(hero) hero.parentNode.insertBefore(el, hero);
+  }
+  if(!hojePagar.length){ el.innerHTML=''; return; }
+  el.innerHTML = `<div style="background:var(--rdim);border:1px solid var(--rb);border-radius:var(--r);padding:.9rem 1.2rem;margin-bottom:10px;cursor:pointer;" onclick="switchPage('agenda')">
+    <span style="font-size:12px;font-weight:600;color:var(--red);">⚠ ${hojePagar.length} pagamento(s) pendente(s) — clique para ver</span>
+  </div>`;
+}
+
+function renderAgendaSection(elId, items, emptyMsg){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  if(!items.length){ el.innerHTML=`<div class="empty">${emptyMsg}</div>`; return; }
+  const sorted = [...items].sort((a,b)=>{
+    const pa = getProximaDataItem(a)||'';
+    const pb = getProximaDataItem(b)||'';
+    return pa.localeCompare(pb);
+  });
+  el.innerHTML = sorted.map(item => {
+    const st = getStatusItem(item);
+    const proxima = getProximaDataItem(item);
+    const stLabel = {
+      hoje:'Vence hoje',futuro:'Agendado',vencido:'Vencido',pausado:'Pausado'
+    }[st]||'';
+    const stColor = {
+      hoje:'var(--amber)',futuro:'var(--text3)',vencido:'var(--red)',pausado:'var(--text3)'
+    }[st]||'var(--text3)';
+    const stBg = {
+      hoje:'var(--adim)',futuro:'var(--surface2)',vencido:'var(--rdim)',pausado:'var(--surface2)'
+    }[st]||'var(--surface2)';
+    const diaInfo = item.tipo==='unico'
+      ? (proxima ? `Data: ${fmtD(proxima)}` : '—')
+      : `Vence dia ${item.dia_vencimento}${proxima?' · próx: '+fmtD(proxima):''}`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${item.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${diaInfo} · ${item.categoria}</div>
+        ${item.descricao?`<div style="font-size:11px;color:var(--text3)">${item.descricao}</div>`:''}
+      </div>
+      <span style="font-size:12px;font-weight:600;color:var(--red);min-width:76px;text-align:right;">−${BRL(item.valor)}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${stBg};color:${stColor};">${stLabel}</span>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button class="tbtn" style="color:var(--green);border-color:var(--gb);" onclick="openPagar('${item.id}')">Pagar</button>
+        <button class="tbtn" onclick="openAdiar('${item.id}')">Adiar</button>
+        <button class="tbtn" onclick="openEditAgenda('${item.id}')">Editar</button>
+        <button class="tbtn del" onclick="delAgendaItem('${item.id}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODALS AGENDA ──
+let _agTipo = 'recorrente';
+
+function openAgendaModal(tipo){
+  _agTipo = tipo;
+  const titles = {recorrente:'Novo recorrente mensal',unico:'Novo agendamento único',assinatura:'Nova assinatura'};
+  document.getElementById('mAgendaTit').textContent = titles[tipo]||'Novo item';
+  document.getElementById('agId').value = '';
+  document.getElementById('agTipoHidden').value = tipo;
+  document.getElementById('agNome').value = '';
+  document.getElementById('agValor').value = '';
+  document.getElementById('agDesc').value = '';
+  document.getElementById('agDia').value = '';
+  document.getElementById('agData').value = today();
+  populateCatSel('agCat');
+  document.getElementById('agDiaGrp').style.display  = tipo==='unico'?'none':'block';
+  document.getElementById('agDataGrp').style.display = tipo==='unico'?'block':'none';
+  openModal('mAgenda');
+}
+
+function openEditAgenda(id){
+  const item = STATE.agenda.find(a=>a.id===id);
+  if(!item) return;
+  _agTipo = item.tipo;
+  const titles = {recorrente:'Editar recorrente',unico:'Editar agendamento',assinatura:'Editar assinatura'};
+  document.getElementById('mAgendaTit').textContent = titles[item.tipo]||'Editar';
+  document.getElementById('agId').value = id;
+  document.getElementById('agTipoHidden').value = item.tipo;
+  document.getElementById('agNome').value = item.nome;
+  document.getElementById('agValor').value = item.valor;
+  document.getElementById('agDesc').value = item.descricao;
+  document.getElementById('agDia').value = item.dia_vencimento;
+  document.getElementById('agData').value = item.data_unica||today();
+  populateCatSel('agCat');
+  document.getElementById('agCat').value = item.categoria;
+  document.getElementById('agDiaGrp').style.display  = item.tipo==='unico'?'none':'block';
+  document.getElementById('agDataGrp').style.display = item.tipo==='unico'?'block':'none';
+  openModal('mAgenda');
+}
+
+async function submitAgenda(){
+  const nome  = document.getElementById('agNome').value.trim();
+  const valor = parseFloat(document.getElementById('agValor').value)||0;
+  const cat   = document.getElementById('agCat').value;
+  const desc  = document.getElementById('agDesc').value.trim();
+  const dia   = document.getElementById('agDia').value;
+  const data  = document.getElementById('agData').value;
+  const id    = document.getElementById('agId').value;
+  const tipo  = document.getElementById('agTipoHidden').value;
+  if(!nome){ alert('Digite o nome'); return; }
+  const payload = {tipo,nome,descricao:desc,categoria:cat,valor:String(valor),
+    dia_vencimento:dia,data_unica:data,recorrente:tipo==='unico'?'nao':'sim',status:'ativo'};
+  if(id){
+    // Editar
+    const item = STATE.agenda.find(a=>a.id===id);
+    if(item) Object.assign(item,{...payload,id});
+    await push('editAgenda',{id,...payload});
+  } else {
+    // Novo
+    const newId = 'a'+Date.now();
+    STATE.agenda.push({id:newId,...payload,ultima_confirmacao:'',proxima_data:''});
+    await push('addAgenda',{id:newId,...payload});
+  }
+  saveLocal();
+  closeModal('mAgenda');
+  renderAgenda();
+}
+
+function openPagar(id){
+  const item = STATE.agenda.find(a=>a.id===id);
+  if(!item) return;
+  document.getElementById('pgId').value = id;
+  document.getElementById('pgNome').value = item.nome;
+  document.getElementById('pgCat').value = item.categoria;
+  document.getElementById('pgData').value = today();
+  document.getElementById('pgValor').value = item.valor||'';
+  document.getElementById('pgDesc').value = item.nome;
+  document.getElementById('mPagarTit').textContent = `Pagar: ${item.nome}`;
+  openModal('mPagar');
+}
+
+async function submitPagar(){
+  const id    = document.getElementById('pgId').value;
+  const data  = document.getElementById('pgData').value;
+  const valor = parseFloat(document.getElementById('pgValor').value);
+  const desc  = document.getElementById('pgDesc').value.trim();
+  const nome  = document.getElementById('pgNome').value;
+  const cat   = document.getElementById('pgCat').value;
+  if(!valor||valor<=0){ alert('Digite um valor válido'); return; }
+  const item = STATE.agenda.find(a=>a.id===id);
+  if(!item) return;
+  const mes = mesKey(data);
+  // Calcula próxima data para recorrentes
+  let proxima = '';
+  if(item.tipo !== 'unico'){
+    const dia = parseInt(item.dia_vencimento)||1;
+    const d = new Date(data);
+    proxima = dsFromDate(new Date(d.getFullYear(), d.getMonth()+1, dia));
+  }
+  // Cria lançamento local
+  const lancId = 'ag'+Date.now();
+  const lanc = {id:lancId,data,tipo:'saida',descricao:desc||nome,categoria:cat,valor,mes,origem:'agenda'};
+  STATE.lancamentos.push(lanc);
+  STATE.saldo = Math.round((STATE.saldo - valor)*100)/100;
+  STATE.saldoDate = fmtD(data);
+  // Atualiza item na agenda
+  item.ultima_confirmacao = data;
+  item.proxima_data = proxima;
+  if(item.tipo === 'unico') item.status = 'concluido';
+  saveLocal();
+  await push('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima});
+  await push('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  closeModal('mPagar');
+  renderAll();
+}
+
+function openAdiar(id){
+  document.getElementById('adId').value = id;
+  document.getElementById('adData').value = today();
+  openModal('mAdiar');
+}
+
+async function submitAdiar(){
+  const id   = document.getElementById('adId').value;
+  const data = document.getElementById('adData').value;
+  if(!data){ alert('Selecione uma data'); return; }
+  const item = STATE.agenda.find(a=>a.id===id);
+  if(!item) return;
+  if(item.tipo === 'unico') item.data_unica = data;
+  else item.proxima_data = data;
+  saveLocal();
+  await push('editAgenda',{id,data_unica:item.data_unica||'',proxima_data:item.proxima_data||''});
+  closeModal('mAdiar');
+  renderAgenda();
+}
+
+async function delAgendaItem(id){
+  if(!confirm('Excluir este item da agenda?')) return;
+  STATE.agenda = STATE.agenda.filter(a=>a.id!==id);
+  saveLocal();
+  await push('delAgenda',{id});
+  renderAgenda();
+}
+
+// ═══════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -1386,6 +1910,7 @@ function goPage(p){ switchPage(p); }
 function switchPage(p){
   document.querySelectorAll('.ntab').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id==='page-'+p));
+  if(p==='agenda') renderAgenda();
 }
 
 function togglePrivacy(){
