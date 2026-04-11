@@ -892,7 +892,7 @@ function getAgendaForMonth(m){
 
   return STATE.agenda.filter(a => {
     if(a.status === 'cancelado' || a.status === 'concluido' || a.status === 'pausado') return false;
-    if(m < mesAtual) return false; // nunca mostra meses passados
+    if(m < mesAtual) return false;
 
     if(a.tipo === 'unico'){
       if(!a.data_unica) return false;
@@ -900,35 +900,51 @@ function getAgendaForMonth(m){
     }
 
     // Recorrente / assinatura
-    // Se temos proxima_data definida, ela é a fonte de verdade
+    const dia = parseInt(a.dia_vencimento)||1;
+
+    // Se tem proxima_data preenchida, usa ela como fonte de verdade
     if(a.proxima_data && a.proxima_data.length >= 7){
-      const mesPróximo = a.proxima_data.slice(0,7);
-      if(mesPróximo !== m) return false;
-      // Verifica periodicidade para meses além do próximo
-      return true;
+      const mesProximo = a.proxima_data.slice(0,7);
+      if(a.tipo !== 'assinatura' || !a.periodicidade || a.periodicidade === 'mensal' || a.periodicidade === 'parcelado_12x'){
+        return mesProximo === m;
+      }
+      // Assinatura com periodicidade — verifica se m é um múltiplo do intervalo a partir da proxima_data
+      const intervalosMes = {trimestral:3, semestral:6, anual:12};
+      const intervalo = intervalosMes[a.periodicidade] || 1;
+      const [py,pm] = mesProximo.split('-').map(Number);
+      const [ty,tm] = m.split('-').map(Number);
+      const diff = (ty-py)*12+(tm-pm);
+      return diff >= 0 && diff % intervalo === 0;
     }
 
     // Sem proxima_data — calcula pelo dia de vencimento
-    const dia = parseInt(a.dia_vencimento)||1;
-    const diaStr = String(dia).padStart(2,'0');
-    const vencimentoMes = `${m}-${diaStr}`;
-
+    // Já confirmado neste mês?
     if(a.ultima_confirmacao && a.ultima_confirmacao.slice(0,7) === m) return false;
 
-    if(m === mesAtual) return vencimentoMes > todayStr; // só se ainda não passou hoje
+    if(m === mesAtual){
+      // Mês atual: só aparece se o vencimento ainda não chegou
+      const vencHoje = new Date(
+        parseInt(mesAtual.slice(0,4)),
+        parseInt(mesAtual.slice(5,7))-1,
+        dia
+      );
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      return vencHoje > hoje;
+    }
 
-    // Mês futuro — verifica periodicidade para assinaturas não mensais
+    // Mês futuro
     if(a.tipo === 'assinatura' && a.periodicidade && a.periodicidade !== 'mensal' && a.periodicidade !== 'parcelado_12x'){
       const intervalosMes = {trimestral:3, semestral:6, anual:12};
       const intervalo = intervalosMes[a.periodicidade] || 1;
       const baseStr = a.ultima_confirmacao ? a.ultima_confirmacao.slice(0,7) : mesAtual;
-      const [bYear, bMon] = baseStr.split('-').map(Number);
-      const [tYear, tMon] = m.split('-').map(Number);
-      const diffMeses = (tYear - bYear)*12 + (tMon - bMon);
-      return diffMeses > 0 && diffMeses % intervalo === 0;
+      const [by,bm] = baseStr.split('-').map(Number);
+      const [ty,tm] = m.split('-').map(Number);
+      const diff = (ty-by)*12+(tm-bm);
+      return diff > 0 && diff % intervalo === 0;
     }
 
-    return true;
+    return true; // mensal — aparece em todos os meses futuros
   });
 }
 
