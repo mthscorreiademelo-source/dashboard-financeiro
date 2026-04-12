@@ -132,6 +132,7 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 
 /* CHART */
 .chart-wrap{position:relative;height:240px;}
+.chart-wrap canvas{cursor:pointer;}
 
 /* GOALS */
 .goals-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -269,6 +270,10 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
 .color-swatch:hover{transform:scale(1.15);}
 .color-swatch.selected{border-color:var(--text);transform:scale(1.15);}
+
+.chart-toggle{padding:3px 10px;border-radius:10px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;transition:all .15s;}
+.chart-toggle:hover{color:var(--text2);}
+.chart-toggle.active{background:var(--bdim);border-color:var(--bb);color:var(--blue);}
 
 /* MISC */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
@@ -466,7 +471,13 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 
   <!-- CHART -->
-  <div class="sec">Receitas vs despesas</div>
+  <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Receitas vs despesas</span>
+    <div style="display:flex;gap:4px;">
+      <button class="chart-toggle active" id="ctHist" onclick="setChartView('hist')">Histórico</button>
+      <button class="chart-toggle" id="ctAll" onclick="setChartView('all')">Ano completo</button>
+    </div>
+  </div>
   <div class="card"><div class="chart-wrap"><canvas id="chartMain"></canvas></div></div>
 
   <!-- MONTH DETAIL -->
@@ -561,27 +572,53 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div id="agendaAlertHoje"></div>
 
     <!-- Recorrentes mensais -->
-    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
       <span>Recorrentes mensais</span>
-      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('recorrente')">+ Adicionar</button>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select class="fi" id="sortRecorrentes" onchange="renderAgenda()" style="padding:3px 8px;font-size:11px;width:auto;">
+          <option value="data_asc">Próximo vencimento</option>
+          <option value="valor_desc">Maior valor</option>
+          <option value="valor_asc">Menor valor</option>
+          <option value="nome_asc">A → Z</option>
+        </select>
+        <button class="btn btn-blue" style="padding:3px 10px;font-size:11px;" onclick="openAgendaModal('recorrente');setAgTipo('saida')">− Despesa</button>
+        <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="openAgendaModal('recorrente');setAgTipo('entrada')">+ Receita</button>
+      </div>
     </div>
     <div class="card" id="agendaRecorrentes">
       <div class="empty">Nenhum recorrente cadastrado</div>
     </div>
 
     <!-- Agendados únicos -->
-    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>Pagamentos agendados (únicos)</span>
-      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('unico')">+ Adicionar</button>
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <span>Agendados únicos</span>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select class="fi" id="sortUnicos" onchange="renderAgenda()" style="padding:3px 8px;font-size:11px;width:auto;">
+          <option value="data_asc">Data mais próxima</option>
+          <option value="valor_desc">Maior valor</option>
+          <option value="valor_asc">Menor valor</option>
+          <option value="nome_asc">A → Z</option>
+        </select>
+        <button class="btn btn-blue" style="padding:3px 10px;font-size:11px;" onclick="openAgendaModal('unico');setAgTipo('saida')">− Despesa</button>
+        <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="openAgendaModal('unico');setAgTipo('entrada')">+ Receita</button>
+      </div>
     </div>
     <div class="card" id="agendaUnicos">
       <div class="empty">Nenhum agendamento único cadastrado</div>
     </div>
 
     <!-- Assinaturas -->
-    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
       <span>Assinaturas ativas</span>
-      <button class="btn btn-blue" style="padding:4px 12px;font-size:12px;" onclick="openAgendaModal('assinatura')">+ Adicionar</button>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <select class="fi" id="sortAssinaturas" onchange="renderAgenda()" style="padding:3px 8px;font-size:11px;width:auto;">
+          <option value="data_asc">Próximo vencimento</option>
+          <option value="valor_desc">Maior valor</option>
+          <option value="valor_asc">Menor valor</option>
+          <option value="nome_asc">A → Z</option>
+        </select>
+        <button class="btn btn-blue" style="padding:4px 10px;font-size:11px;" onclick="openAgendaModal('assinatura');setAgTipo('saida')">+ Adicionar</button>
+      </div>
     </div>
     <div class="card" id="agendaAssinaturas">
       <div class="empty">Nenhuma assinatura cadastrada</div>
@@ -659,10 +696,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
         <div class="color-dot" id="lColorDot"></div>
       </div>
     </div>
-    <div class="fg" id="lFonteGrp" style="display:none;">
-      <label class="fl">Fonte / Origem</label>
-      <input class="fi" type="text" id="lFonte" placeholder="Ex: Salário CLT, Sebrae, Freelance..."/>
-    </div>
     <div class="modal-acts">
       <button class="btn btn-blue" style="flex:1" onclick="submitLanc()">Salvar</button>
       <button class="btn btn-neu" onclick="closeModal('mLanc')">Cancelar</button>
@@ -704,6 +737,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="modal-acts" id="eActs1">
       <button class="btn btn-blue" style="flex:1" onclick="editStep1()">Salvar alterações</button>
       <button class="btn btn-neu" onclick="closeModal('mEdit')">Cancelar</button>
+      <button class="btn btn-red" onclick="openDelFromEdit()" title="Excluir lançamento">🗑</button>
     </div>
     <div class="modal-acts" id="eActs2" style="display:none;">
       <button class="btn btn-blue" style="flex:1" onclick="editStep2()">✓ Confirmar e salvar</button>
@@ -734,6 +768,17 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       </div>
     </div>
     <input type="hidden" id="delId"/>
+  </div>
+</div>
+
+<!-- Modal: chart drill-down -->
+<div class="overlay" id="mChartDrill">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-hdr">
+      <span class="modal-title" id="drillTit">Detalhamento</span>
+      <button class="modal-x" onclick="closeModal('mChartDrill')">✕</button>
+    </div>
+    <div id="drillContent" style="max-height:65vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -780,7 +825,12 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <span class="modal-title" id="mAgendaTit">Novo item</span>
       <button class="modal-x" onclick="closeModal('mAgenda')">✕</button>
     </div>
-    <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="agNome" placeholder="Ex: Hapvida, Claro, Graduação..."/></div>
+    <!-- Tipo: despesa ou receita -->
+    <div class="type-row" id="agTipoRow">
+      <button class="type-btn out active" id="agTipoDesp" onclick="setAgTipo('saida')">− Despesa</button>
+      <button class="type-btn" id="agTipoRec" onclick="setAgTipo('entrada')" style="background:var(--gdim);border-color:var(--gb);color:var(--green);opacity:.4;">+ Receita</button>
+    </div>
+    <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="agNome" placeholder="Ex: Hapvida, Salário, Freelance..."/></div>
     <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi currency-input" type="text" id="agValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Categoria</label><select class="fi" id="agCat"></select></div>
     <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="agDesc" placeholder="Observações..."/></div>
@@ -801,7 +851,11 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     </div>
     <div class="fg" id="agDiaGrp">
       <label class="fl">Dia do vencimento (1–31)</label>
-      <input class="fi" type="number" id="agDia" min="1" max="31" placeholder="Ex: 10"/>
+      <select class="fi" id="agDiaSelect" onchange="onDiaSelectChange(this.value)">
+        <option value="dia_fixo">Dia fixo do mês</option>
+        <option value="quinto_util">5º dia útil do mês (CLT)</option>
+      </select>
+      <input class="fi" type="number" id="agDia" min="1" max="31" placeholder="Ex: 10" style="margin-top:6px;"/>
     </div>
     <div class="fg" id="agDataGrp" style="display:none;">
       <label class="fl">Data do pagamento</label>
@@ -809,6 +863,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     </div>
     <input type="hidden" id="agId"/>
     <input type="hidden" id="agTipoHidden"/>
+    <input type="hidden" id="agFluxo" value="saida"/>
     <div class="modal-acts">
       <button class="btn btn-blue" style="flex:1" onclick="submitAgenda()">Salvar</button>
       <button class="btn btn-neu" onclick="closeModal('mAgenda')">Cancelar</button>
@@ -816,7 +871,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 </div>
 
-<!-- Modal: pagar item da agenda -->
+<!-- Modal: pagar/receber item da agenda -->
 <div class="overlay" id="mPagar">
   <div class="modal">
     <div class="modal-hdr">
@@ -826,14 +881,15 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:var(--rs);">
       Confirme os dados antes de lançar no extrato. Você pode ajustar o valor real se for diferente do estimado.
     </div>
-    <div class="fg"><label class="fl">Data do pagamento</label><input class="fi" type="date" id="pgData"/></div>
+    <div class="fg"><label class="fl">Data</label><input class="fi" type="date" id="pgData"/></div>
     <div class="fg"><label class="fl">Valor real (R$)</label><input class="fi currency-input" type="text" id="pgValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
     <div class="fg"><label class="fl">Descrição</label><input class="fi" type="text" id="pgDesc"/></div>
     <input type="hidden" id="pgId"/>
     <input type="hidden" id="pgNome"/>
     <input type="hidden" id="pgCat"/>
+    <input type="hidden" id="pgFluxo" value="saida"/>
     <div class="modal-acts">
-      <button class="btn btn-green" style="flex:1" onclick="submitPagar()">✓ Confirmar e lançar no extrato</button>
+      <button class="btn btn-green" style="flex:1" id="pgConfirmBtn" onclick="submitPagar()">✓ Confirmar e lançar no extrato</button>
       <button class="btn btn-neu" onclick="closeModal('mPagar')">Cancelar</button>
     </div>
   </div>
@@ -940,7 +996,7 @@ let STATE = {
   lancamentos: [],
   agenda: [],
 };
-let privOn=false, chartInst=null, curMonth='', curYear=new Date().getFullYear(), curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false;
+let privOn=false, chartInst=null, curMonth='', curYear=new Date().getFullYear(), curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false, chartView='hist';
 
 const META_COLORS = ['#34d399','#60a5fa','#f472b6','#fbbf24','#a78bfa','#fb923c','#2dd4bf','#f87171','#818cf8','#86efac','#e879f9','#94a3b8'];
 
@@ -1042,6 +1098,8 @@ async function syncData(){
         status:      String(a.status||'ativo'),
         proxima_data: String(a.proxima_data||''),
         calendar_event_id: String(a.calendar_event_id||''),
+        fluxo:       String(a.fluxo||'saida'),
+        quinto_util: String(a.quinto_util||'nao'),
       }));
     }
     saveLocal();
@@ -1106,7 +1164,56 @@ function getCatsForMonth(m){
   return Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
 }
 
-// Retorna itens da agenda programados para um mês específico (não pagos)
+// Calcula o 5º dia útil de um mês (ignora fins de semana)
+function quintoUtil(year, month){
+  // month: 0-based
+  let count = 0;
+  let day = 1;
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  while(day <= daysInMonth){
+    const d = new Date(year, month, day);
+    const dow = d.getDay();
+    if(dow !== 0 && dow !== 6){ // not weekend
+      count++;
+      if(count === 5) return day;
+    }
+    day++;
+  }
+  return day - 1; // fallback
+}
+
+function calcProximaDataItem(item){
+  if(item.tipo === 'unico') return item.data_unica;
+  if(item.proxima_data && item.proxima_data.length >= 7) return item.proxima_data;
+  const now = new Date();
+  if(item.quinto_util === 'sim'){
+    let yr = now.getFullYear(), mo = now.getMonth();
+    const d = quintoUtil(yr, mo);
+    const base = new Date(yr, mo, d);
+    if(base <= now){ mo++; if(mo>11){mo=0;yr++;} }
+    const dd = quintoUtil(yr, mo);
+    return `${yr}-${String(mo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+  }
+  const dia = parseInt(item.dia_vencimento)||1;
+  let yr = now.getFullYear(), mo = now.getMonth();
+  const base = new Date(yr, mo, dia);
+  if(base <= now){ mo++; if(mo>11){mo=0;yr++;} }
+  return `${yr}-${String(mo+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+}
+
+// Sum programmed income for a month
+function sumAgendaIncomeMonth(m){
+  return getAgendaForMonthByFluxo(m, 'entrada').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+}
+
+// Sum programmed expenses for a month
+function sumAgendaExpenseMonth(m){
+  return getAgendaForMonthByFluxo(m, 'saida').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+}
+
+function getAgendaForMonthByFluxo(m, fluxo){
+  return getAgendaForMonth(m).filter(a=>(a.fluxo||'saida')===fluxo);
+}
 function getAgendaForMonth(m){
   const todayStr = today();
   const mesAtual = todayStr.slice(0,7);
@@ -1121,8 +1228,6 @@ function getAgendaForMonth(m){
     }
 
     // Recorrente / assinatura
-    const dia = parseInt(a.dia_vencimento)||1;
-
     // Se tem proxima_data preenchida, usa ela como fonte de verdade
     if(a.proxima_data && a.proxima_data.length >= 7){
       const mesProximo = a.proxima_data.slice(0,7);
@@ -1138,23 +1243,20 @@ function getAgendaForMonth(m){
       return diff >= 0 && diff % intervalo === 0;
     }
 
-    // Sem proxima_data — calcula pelo dia de vencimento
-    // Já confirmado neste mês?
+    // Sem proxima_data — calcula pelo dia/quinto útil
     if(a.ultima_confirmacao && a.ultima_confirmacao.slice(0,7) === m) return false;
 
-    if(m === mesAtual){
-      // Mês atual: só aparece se o vencimento ainda não chegou
-      const vencHoje = new Date(
-        parseInt(mesAtual.slice(0,4)),
-        parseInt(mesAtual.slice(5,7))-1,
-        dia
-      );
-      const hoje = new Date();
-      hoje.setHours(0,0,0,0);
-      return vencHoje > hoje;
+    let dia;
+    if(a.quinto_util === 'sim'){
+      const [y,mo] = m.split('-').map(Number);
+      dia = quintoUtil(y, mo-1);
+    } else {
+      dia = parseInt(a.dia_vencimento)||1;
     }
+    const vencimentoMes = `${m}-${String(dia).padStart(2,'0')}`;
 
-    // Mês futuro
+    if(m === mesAtual) return vencimentoMes > todayStr;
+
     if(a.tipo === 'assinatura' && a.periodicidade && a.periodicidade !== 'mensal' && a.periodicidade !== 'parcelado_12x'){
       const intervalosMes = {trimestral:3, semestral:6, anual:12};
       const intervalo = intervalosMes[a.periodicidade] || 1;
@@ -1165,7 +1267,7 @@ function getAgendaForMonth(m){
       return diff > 0 && diff % intervalo === 0;
     }
 
-    return true; // mensal — aparece em todos os meses futuros
+    return true;
   });
 }
 
@@ -1352,48 +1454,209 @@ function renderKPI(){
   const monthsWithData=ALL_MONTHS.filter(m=>sumIn(m)>0||sumOut(m)>0);
   const avg=monthsWithData.length?aE/monthsWithData.length:0;
   const mesAtual=today().slice(0,7);
-  const programado=curYear===new Date().getFullYear()?sumAgendaMonth(mesAtual):0;
+  const agendaMes = curYear===new Date().getFullYear() ? getAgendaForMonth(mesAtual) : [];
+  const progIncMes = agendaMes.filter(a=>(a.fluxo||'saida')==='entrada').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const progExpMes = agendaMes.filter(a=>(a.fluxo||'saida')==='saida').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const programado = progIncMes + progExpMes;
   document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi g"><div class="kpi-label">Total de receitas</div><div class="kpi-val sv">${BRL(aI)}</div><div class="kpi-sub">${curYear}</div></div>
     <div class="kpi r"><div class="kpi-label">Total de despesas</div><div class="kpi-val sv">${BRL(aE)}</div><div class="kpi-sub">${curYear}</div></div>
     <div class="kpi ${aB>=0?'g':'r'}"><div class="kpi-label">Saldo do período</div><div class="kpi-val sv">${BRL(aB)}</div><div class="kpi-sub">${aB>=0?'positivo':'negativo'}</div></div>
     <div class="kpi a"><div class="kpi-label">Gasto médio mensal</div><div class="kpi-val sv">${BRL(avg)}</div><div class="kpi-sub">${monthsWithData.length} meses com dados</div></div>
-    ${programado>0?`<div class="kpi" style="border-color:rgba(148,163,184,.25);background:var(--surface);grid-column:1/-1;"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div><div class="kpi-label">Programado este mês (pendente)</div><div class="kpi-val sv" style="color:#94a3b8">${BRL(programado)}</div><div class="kpi-sub">ainda não pago — ${getAgendaForMonth(mesAtual).length} item(ns)</div></div><div style="font-size:11px;color:var(--text3);max-width:220px;text-align:right;">Valores da agenda ainda não confirmados como pagos</div></div></div>`:''}
+    ${programado>0?`<div class="kpi" style="border-color:rgba(148,163,184,.25);background:var(--surface);grid-column:1/-1;">
+      <div class="kpi-label" style="margin-bottom:8px;">Programado este mês — ${agendaMes.length} item(ns) pendente(s)</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+        ${progIncMes>0?`<div><div style="font-size:10px;color:var(--text3);margin-bottom:2px;">A receber</div><div class="kpi-val sv" style="color:#6ee7b7;font-size:1.1rem;">+${BRL(progIncMes)}</div></div>`:''}
+        ${progExpMes>0?`<div><div style="font-size:10px;color:var(--text3);margin-bottom:2px;">A pagar</div><div class="kpi-val sv" style="color:#94a3b8;font-size:1.1rem;">−${BRL(progExpMes)}</div></div>`:''}
+        ${progIncMes>0&&progExpMes>0?`<div style="border-left:1px solid var(--border2);padding-left:20px;"><div style="font-size:10px;color:var(--text3);margin-bottom:2px;">Saldo programado</div><div class="kpi-val sv" style="color:${progIncMes-progExpMes>=0?'#6ee7b7':'#f87171'};font-size:1.1rem;">${progIncMes-progExpMes>=0?'+':'−'}${BRL(Math.abs(progIncMes-progExpMes))}</div></div>`:''}
+      </div>
+    </div>`:''}
   `;
+}
+
+function setChartView(view){
+  chartView = view;
+  document.getElementById('ctAll')?.classList.toggle('active', view==='all');
+  document.getElementById('ctHist')?.classList.toggle('active', view==='hist');
+  renderChart();
 }
 
 // ═══════════════════════════════════════
 // CHART
 // ═══════════════════════════════════════
 function renderChart(){
-  const labels=ALL_MONTHS.map(m=>monthLabel(m).replace(' 2026',''));
-  const incs=ALL_MONTHS.map(m=>sumIn(m));
-  const exps=ALL_MONTHS.map(m=>sumOut(m));
-  const metas=ALL_MONTHS.map(m=>sumMeta(m));
-  const prog=ALL_MONTHS.map(m=>sumAgendaMonth(m));
-  const hasMeta=metas.some(v=>v>0);
-  const hasProg=prog.some(v=>v>0);
+  // Determine which months to show
+  let months = ALL_MONTHS;
+  if(chartView === 'hist'){
+    const mesAtual = today().slice(0,7);
+    months = ALL_MONTHS.filter(m => m <= mesAtual);
+    if(!months.length) months = ALL_MONTHS;
+  }
+  const labels  = months.map(m=>monthLabel(m).replace(' '+String(curYear),''));
+  const incs    = months.map(m=>sumIn(m));
+  const exps    = months.map(m=>sumOut(m));
+  const metas   = months.map(m=>sumMeta(m));
+  const progExp = months.map(m=>sumAgendaExpenseMonth(m));
+  const progInc = months.map(m=>sumAgendaIncomeMonth(m));
+  const hasMeta    = metas.some(v=>v>0);
+  const hasProgExp = progExp.some(v=>v>0);
+  const hasProgInc = progInc.some(v=>v>0);
+  const hasProg    = hasProgExp || hasProgInc;
   if(chartInst) chartInst.destroy();
+  // borderRadius per bar: round top only when this segment IS the topmost in its stack
+  const rTop  = {topLeft:5, topRight:5, bottomLeft:0, bottomRight:0};
+  const rFlat = {topLeft:0, topRight:0, bottomLeft:0, bottomRight:0};
+
+  // For each month: is this the top segment? (i.e. no prog value above it)
+  const incRadii  = months.map((_,i) => progInc[i]>0 ? rFlat : rTop);
+  const expRadii  = months.map((_,i) => progExp[i]>0 ? rFlat : rTop);
+  const metaRadii = months.map(() => rTop);
+  const progRadii = months.map(() => rTop);
+
   const datasets=[
-    {label:'Receitas', data:incs, backgroundColor:'rgba(52,211,153,.65)', borderRadius:5},
-    {label:'Despesas', data:exps, backgroundColor:'rgba(248,113,113,.65)', borderRadius:5},
+    {label:'Receitas',  data:incs,  backgroundColor:'rgba(52,211,153,.65)',  borderRadius:incRadii,  borderSkipped:false, stack:'inc'},
+    {label:'Despesas',  data:exps,  backgroundColor:'rgba(248,113,113,.65)', borderRadius:expRadii,  borderSkipped:false, stack:'exp'},
   ];
-  if(hasMeta) datasets.push({label:'Aportes em metas', data:metas, backgroundColor:'rgba(96,165,250,.65)', borderRadius:5});
-  if(hasProg) datasets.push({label:'Programado', data:prog, backgroundColor:'rgba(148,163,184,.4)', borderRadius:5, borderColor:'rgba(148,163,184,.6)', borderWidth:1});
+  if(hasMeta)    datasets.push({label:'Aportes em metas',  data:metas,   backgroundColor:'rgba(96,165,250,.65)',   borderRadius:metaRadii, borderSkipped:false, stack:'meta'});
+  if(hasProgInc) datasets.push({label:'Receita programada',data:progInc, backgroundColor:'rgba(148,163,184,.35)', borderRadius:progRadii, borderSkipped:false, stack:'inc', borderColor:'rgba(148,163,184,.5)',borderWidth:1});
+  if(hasProgExp) datasets.push({label:'Despesa programada',data:progExp, backgroundColor:'rgba(148,163,184,.35)', borderRadius:progRadii, borderSkipped:false, stack:'exp', borderColor:'rgba(148,163,184,.5)',borderWidth:1});
   chartInst=new Chart(document.getElementById('chartMain'),{
     type:'bar',
     data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
+      onClick:(evt, elements)=>{
+        if(!elements.length) return;
+        const el = elements[0];
+        const datasetLabel = datasets[el.datasetIndex].label;
+        const monthIdx = el.index;
+        const m = months[monthIdx];
+        openChartDrill(m, datasetLabel);
+      },
       plugins:{
-        legend:{display:hasMeta||hasProg,labels:{color:'#9090a0',font:{size:11},boxWidth:12,padding:16}},
+        legend:{
+          display:hasMeta||hasProg,
+          position:'top',
+          labels:{color:'#9090a0',font:{size:11},boxWidth:12,padding:14}
+        },
         tooltip:{callbacks:{label:ctx=>privOn?' ••••':` ${ctx.dataset.label}: ${BRL(ctx.raw)}`}}
       },
       scales:{
-        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#606070',font:{size:11}}},
-        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#606070',font:{size:11},callback:v=>privOn?'•••':'R$'+Math.round(v/1000)+'k'}}
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#606070',font:{size:11}},stacked:true},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#606070',font:{size:11},callback:v=>privOn?'•••':'R$'+Math.round(v/1000)+'k'},stacked:true}
       }
     }
   });
+}
+
+// ═══════════════════════════════════════
+// CHART DRILL-DOWN
+// ═══════════════════════════════════════
+function openChartDrill(m, datasetLabel){
+  const label = monthLabel(m);
+  document.getElementById('drillTit').textContent = `${datasetLabel} — ${label}`;
+  const el = document.getElementById('drillContent');
+
+  if(datasetLabel === 'Receitas'){
+    const items = getIn(m).sort((a,b)=>b.valor-a.valor);
+    el.innerHTML = drillListHtml(items, 'entrada');
+
+  } else if(datasetLabel === 'Despesas'){
+    const cats = getCatsForMonth(m); // [[name, {total, items}]]
+    const total = sumOut(m);
+    el.innerHTML = cats.length
+      ? cats.map(([name, data], ci)=>{
+          const color = getCatColor(name);
+          const pct = total>0 ? Math.round(data.total/total*100) : 0;
+          const rows = [...data.items].sort((a,b)=>b.valor-a.valor);
+          const wid = `drill-cat-${ci}`;
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 4px;cursor:pointer;" onclick="toggleDrillCat('${wid}')">
+              <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+              <span style="flex:1;font-size:13px;color:var(--text);">${name}</span>
+              <span style="font-size:11px;color:var(--text3);">${pct}%</span>
+              <span style="font-size:13px;font-weight:600;color:var(--red);min-width:80px;text-align:right;font-variant-numeric:tabular-nums;" class="sv">−${BRL(data.total)}</span>
+              <span style="font-size:11px;color:var(--text3);margin-left:4px;" id="arr-${wid}">›</span>
+            </div>
+            <div id="${wid}" style="display:none;padding:0 4px 6px 22px;">
+              ${rows.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--border);font-size:12px;gap:8px;">
+                <span style="color:var(--text2);flex:1;">${l.descricao}</span>
+                <span style="color:var(--text3);font-size:11px;">${fmtD(l.data)}</span>
+                <span style="color:var(--red);font-variant-numeric:tabular-nums;" class="sv">−${BRL(l.valor)}</span>
+                <button class="tbtn" style="font-size:10px;padding:2px 7px;" onclick="closeModal('mChartDrill');openEdit('${l.id}')">✏</button>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')
+      : '<div class="empty">Sem despesas neste mês</div>';
+
+  } else if(datasetLabel === 'Aportes em metas'){
+    const items = getMeta(m).sort((a,b)=>b.valor-a.valor);
+    el.innerHTML = drillListHtml(items, 'meta');
+
+  } else if(datasetLabel === 'Receita programada'){
+    const items = getAgendaForMonthByFluxo(m,'entrada');
+    el.innerHTML = drillAgendaHtml(items, 'entrada');
+
+  } else if(datasetLabel === 'Despesa programada'){
+    const items = getAgendaForMonthByFluxo(m,'saida');
+    el.innerHTML = drillAgendaHtml(items, 'saida');
+  }
+
+  openModal('mChartDrill');
+}
+
+function toggleDrillCat(wid){
+  const el  = document.getElementById(wid);
+  const arr = document.getElementById('arr-'+wid);
+  if(!el) return;
+  const open = el.style.display === 'none';
+  el.style.display  = open ? 'block' : 'none';
+  if(arr) arr.textContent = open ? '⌄' : '›';
+}
+
+function drillListHtml(items, tipo){
+  if(!items.length) return '<div class="empty">Sem lançamentos</div>';
+  const total = items.reduce((s,l)=>s+l.valor,0);
+  const isInc = tipo === 'entrada';
+  const color = isInc ? 'var(--green)' : 'var(--blue)';
+  const prefix = isInc ? '+' : '↔';
+  return `<div style="padding:6px 4px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--text2);">
+    <span>${items.length} lançamento(s)</span>
+    <span style="color:${color};font-weight:600;" class="sv">${prefix} ${BRL(total)}</span>
+  </div>`
+  + items.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:13px;">
+    <div style="flex:1;">
+      <div style="color:var(--text);">${l.descricao}</div>
+      <div style="font-size:11px;color:var(--text3);">${fmtD(l.data)} · ${l.categoria}</div>
+    </div>
+    <span style="color:${color};font-weight:600;font-variant-numeric:tabular-nums;" class="sv">${prefix} ${BRL(l.valor)}</span>
+    <button class="tbtn" style="font-size:10px;padding:2px 7px;" onclick="closeModal('mChartDrill');openEdit('${l.id}')">✏ Editar</button>
+  </div>`).join('');
+}
+
+function drillAgendaHtml(items, fluxo){
+  if(!items.length) return '<div class="empty">Nenhum item programado</div>';
+  const total = items.reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const isInc = fluxo === 'entrada';
+  const color = isInc ? 'var(--green)' : '#94a3b8';
+  const prefix = isInc ? '+' : '−';
+  return `<div style="padding:6px 4px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--text2);">
+    <span>${items.length} item(s) programado(s)</span>
+    <span style="color:${color};font-weight:600;" class="sv">${prefix} ${BRL(total)}</span>
+  </div>`
+  + items.map(a=>{
+    const proxima = getProximaDataItem(a);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:13px;">
+      <div style="flex:1;">
+        <div style="color:var(--text);">${a.nome}</div>
+        <div style="font-size:11px;color:var(--text3);">${proxima?fmtD(proxima):'—'} · ${a.categoria}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:${color};font-weight:600;font-variant-numeric:tabular-nums;" class="sv">${prefix} ${BRL(a.valor)}</span>
+        <button class="tbtn" style="font-size:10px;padding:2px 7px;" onclick="closeModal('mChartDrill');openPagar('${a.id}')">${isInc?'Receber':'Pagar'}</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════
@@ -1436,7 +1699,9 @@ function renderMonthContent(m){
   const future=isFutureMonth(m);
   const emptyMsg=future?'Aguardando lançamentos':'Sem lançamentos este mês';
   const agendaItems=getAgendaForMonth(m);
-  const totalProg=agendaItems.reduce((s,a)=>s+a.valor,0);
+  const progInc = agendaItems.filter(a=>(a.fluxo||'saida')==='entrada').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const progExp = agendaItems.filter(a=>(a.fluxo||'saida')==='saida').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+  const totalProg = progInc + progExp;
 
   el.innerHTML=`
     <div class="two-col" style="margin-bottom:12px;">
@@ -1447,11 +1712,12 @@ function renderMonthContent(m){
         }
       </div>
       <div class="card"><h3>Balanço</h3>
-        ${hasData
-          ? `<div class="rl"><span class="lb">Receita total</span><span class="vl g sv">+${BRL(inc)}</span></div>
-             <div class="rl"><span class="lb">Despesas reais</span><span class="vl r sv">−${BRL(exp)}</span></div>
-             ${totalProg>0?`<div class="rl"><span class="lb" style="color:#94a3b8">Programado</span><span class="vl sv" style="color:#94a3b8">−${BRL(totalProg)}</span></div>`:''}
-             <div class="rl total"><span>Saldo${totalProg>0?' (sem programado)':''}</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>`
+        ${hasData||totalProg>0
+          ? `${inc>0?`<div class="rl"><span class="lb">Receita total</span><span class="vl g sv">+${BRL(inc)}</span></div>`:''}
+             ${progInc>0?`<div class="rl"><span class="lb" style="color:#94a3b8">Receita programada</span><span class="vl sv" style="color:#6ee7b7">+${BRL(progInc)}</span></div>`:''}
+             ${exp>0?`<div class="rl"><span class="lb">Despesas reais</span><span class="vl r sv">−${BRL(exp)}</span></div>`:''}
+             ${progExp>0?`<div class="rl"><span class="lb" style="color:#94a3b8">Despesas programadas</span><span class="vl sv" style="color:#94a3b8">−${BRL(progExp)}</span></div>`:''}
+             <div class="rl total"><span>Saldo real</span><span class="vl ${b>=0?'g':'r'} sv">${b>=0?'+':'−'}${BRL(Math.abs(b))}</span></div>`
           : `<div class="empty" style="padding:1rem 0">${emptyMsg}</div>`
         }
       </div>
@@ -1488,8 +1754,8 @@ function renderMonthContent(m){
             <span style="flex:1;font-size:13px;color:var(--text2);">${a.nome}</span>
             <span style="font-size:11px;color:var(--text3);">${dia}${periLabel}</span>
             <span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3);">${a.categoria}</span>
-            <span style="font-size:12px;color:#94a3b8;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;">−${BRL(a.valor)}</span>
-            <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="openPagar('${a.id}')">Pagar</button>
+            <span style="font-size:12px;color:${(a.fluxo||'saida')==='entrada'?'#94a3b8':'#94a3b8'};min-width:74px;text-align:right;font-variant-numeric:tabular-nums;">${(a.fluxo||'saida')==='entrada'?'+':'−'}${BRL(a.valor)}</span>
+            <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="openPagar('${a.id}')">${(a.fluxo||'saida')==='entrada'?'Receber':'Pagar'}</button>
           </div>`;
         }).join('')}
       </div>
@@ -1939,9 +2205,7 @@ function openLanc(tipo){
   document.getElementById('lData').value=today();
   document.getElementById('lValor').value='';
   document.getElementById('lDesc').value='';
-  document.getElementById('lFonte').value='';
-  populateCatSel('lCat');
-  setTipo(tipo);
+  setTipo(tipo); // setTipo also populates lCat
   document.getElementById('mLancTit').textContent=tipo==='entrada'?'Registrar entrada':'Registrar saída';
   openModal('mLanc');
 }
@@ -1950,9 +2214,21 @@ function setTipo(t){
   lancTipo=t;
   document.getElementById('btnIn').className='type-btn'+(t==='entrada'?' in':'');
   document.getElementById('btnOut').className='type-btn'+(t==='saida'?' out':'');
-  document.getElementById('lCatGrp').style.display=t==='saida'?'block':'none';
-  document.getElementById('lFonteGrp').style.display=t==='entrada'?'block':'none';
+  document.getElementById('lCatGrp').style.display='block'; // always show
   document.getElementById('lNewCatGrp').style.display='none';
+  // Populate categories based on type
+  const sel = document.getElementById('lCat');
+  if(!sel) return;
+  const tipo = t === 'entrada' ? 'entrada' : 'despesa';
+  let cats = STATE.categorias.filter(c => c.tipo === tipo);
+  if(t === 'entrada' && !cats.length){
+    cats = [
+      {nome:'Salário CLT'},{nome:'Freelance'},{nome:'MEI / PJ'},
+      {nome:'Aluguel recebido'},{nome:'Investimentos'},{nome:'Outros'}
+    ];
+  }
+  sel.innerHTML = cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  sel.innerHTML += `<option value="__nova__">+ Nova categoria...</option>`;
 }
 
 function populateCatSel(id){
@@ -1968,6 +2244,7 @@ function onCatChange(v){
   if(show){
     newCatColor=AUTO_COLORS.find(c=>!STATE.categorias.find(s=>s.cor===c))||'#888';
     document.getElementById('lColorDot').style.background=newCatColor;
+    document.getElementById('lNewCat').placeholder=lancTipo==='entrada'?'Ex: Comissão, Bônus...':'Ex: Academia, Farmácia...';
   }
 }
 
@@ -1979,14 +2256,12 @@ function submitLanc(){
   const hora=document.getElementById('lHora').value||'';
   const desc=document.getElementById('lDesc').value.trim();
   if(!valor||valor<=0||!data||!desc){alert('Preencha todos os campos');return;}
-  let cat=lancTipo==='entrada'
-    ?(document.getElementById('lFonte').value.trim()||'Receita')
-    :document.getElementById('lCat').value;
+  let cat=document.getElementById('lCat').value;
   if(cat==='__nova__'){
     const nome=document.getElementById('lNewCat').value.trim();
     if(!nome){alert('Digite o nome da nova categoria');return;}
     cat=nome;
-    const nova={nome,cor:newCatColor,tipo:'despesa'};
+    const nova={nome,cor:newCatColor,tipo:lancTipo==='entrada'?'entrada':'despesa'};
     STATE.categorias.push(nova);
     pushBg('addCategoria',nova);
   }
@@ -2067,6 +2342,12 @@ function openEdit(id){
   document.getElementById('eActs2').style.display='none';
   openModal('mEdit');
 }
+function openDelFromEdit(){
+  const id = document.getElementById('eId').value;
+  closeModal('mEdit');
+  openDel(id);
+}
+
 function editStep1(){
   document.getElementById('eConfirm').style.display='block';
   document.getElementById('eActs1').style.display='none';
@@ -2206,10 +2487,10 @@ function renderAgenda(){
   const alertEl = document.getElementById('agendaAlertHoje');
   if(hojePagar.length && document.getElementById('page-agenda').classList.contains('active')){
     alertEl.innerHTML = `<div style="background:var(--rdim);border:1px solid var(--rb);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px;">⚠ ${hojePagar.length} pagamento(s) pendente(s) hoje</div>
+      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px;">⚠ ${hojePagar.length} item(s) pendente(s) hoje</div>
       ${hojePagar.map(a=>`<div style="font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:3px 0;">
         <span>${a.nome}</span>
-        <span style="color:var(--red)">−${BRL(a.valor)}</span>
+        <span style="color:${(a.fluxo||'saida')==='entrada'?'var(--green)':'var(--red)'}">${(a.fluxo||'saida')==='entrada'?'+':'−'}${BRL(a.valor)}</span>
       </div>`).join('')}
     </div>`;
   } else {
@@ -2219,13 +2500,14 @@ function renderAgenda(){
   // Também mostra alerta no dashboard (hero) se houver pendências
   renderAgendaAlertDashboard(hojePagar);
 
-  const recorrentes  = ativos.filter(a => a.tipo === 'recorrente');
-  const unicos       = ativos.filter(a => a.tipo === 'unico');
-  const assinaturas  = ativos.filter(a => a.tipo === 'assinatura');
+  // All items grouped by tipo (receitas + despesas together in each section)
+  const recorrentes = ativos.filter(a => a.tipo === 'recorrente');
+  const unicos      = ativos.filter(a => a.tipo === 'unico');
+  const assinaturas = ativos.filter(a => a.tipo === 'assinatura');
 
-  renderAgendaSection('agendaRecorrentes',  recorrentes,  'Nenhum recorrente cadastrado');
-  renderAgendaSection('agendaUnicos',       unicos,       'Nenhum agendamento único cadastrado');
-  renderAgendaSection('agendaAssinaturas',  assinaturas,  'Nenhuma assinatura cadastrada');
+  renderAgendaSection('agendaRecorrentes', recorrentes, 'Nenhum recorrente cadastrado');
+  renderAgendaSection('agendaUnicos',      unicos,      'Nenhum agendamento único cadastrado');
+  renderAgendaSection('agendaAssinaturas', assinaturas, 'Nenhuma assinatura cadastrada');
 }
 
 function renderAgendaAlertDashboard(hojePagar){
@@ -2242,16 +2524,38 @@ function renderAgendaAlertDashboard(hojePagar){
   </div>`;
 }
 
+function sortAgendaItems(items, sortVal){
+  const copy = [...items];
+  switch(sortVal){
+    case 'valor_desc': return copy.sort((a,b)=>(parseFloat(b.valor)||0)-(parseFloat(a.valor)||0));
+    case 'valor_asc':  return copy.sort((a,b)=>(parseFloat(a.valor)||0)-(parseFloat(b.valor)||0));
+    case 'nome_asc':   return copy.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+    default: // data_asc
+      return copy.sort((a,b)=>{
+        const pa = getProximaDataItem(a)||'9999';
+        const pb = getProximaDataItem(b)||'9999';
+        return pa.localeCompare(pb);
+      });
+  }
+}
+
 function renderAgendaSection(elId, items, emptyMsg){
   const el = document.getElementById(elId);
   if(!el) return;
   if(!items.length){ el.innerHTML=`<div class="empty">${emptyMsg}</div>`; return; }
-  const sorted = [...items].sort((a,b)=>{
-    const pa = getProximaDataItem(a)||'';
-    const pb = getProximaDataItem(b)||'';
-    return pa.localeCompare(pb);
-  });
-  el.innerHTML = sorted.map(item => {
+
+  // Get sort value from corresponding select
+  const sortMap = {agendaRecorrentes:'sortRecorrentes', agendaUnicos:'sortUnicos', agendaAssinaturas:'sortAssinaturas'};
+  const sortEl = document.getElementById(sortMap[elId]);
+  const sortVal = sortEl ? sortEl.value : 'data_asc';
+
+  // Separate receitas and despesas
+  const receitas = items.filter(a => a.fluxo === 'entrada');
+  const despesas = items.filter(a => (a.fluxo||'saida') === 'saida');
+  const sortedRec = sortAgendaItems(receitas, sortVal);
+  const sortedDesp = sortAgendaItems(despesas, sortVal);
+
+  const renderItem = item => {
     const st = getStatusItem(item);
     const proxima = getProximaDataItem(item);
     const stLabel = {hoje:'Vence hoje',futuro:'Agendado',vencido:'Vencido',pausado:'Pausado'}[st]||'';
@@ -2277,20 +2581,78 @@ function renderAgendaSection(elId, items, emptyMsg){
         <div style="font-size:11px;color:var(--text3)">${diaInfo} · ${item.categoria}</div>
         ${item.descricao?`<div style="font-size:11px;color:var(--text3)">${item.descricao}</div>`:''}
       </div>
-      <span style="font-size:12px;font-weight:600;color:var(--red);min-width:76px;text-align:right;">−${BRL(item.valor)}</span>
+      <span style="font-size:12px;font-weight:600;color:${(item.fluxo||'saida')==='entrada'?'var(--green)':'var(--red)'};min-width:76px;text-align:right;">${(item.fluxo||'saida')==='entrada'?'+':'−'}${BRL(item.valor)}</span>
       <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${stBg};color:${stColor};">${stLabel}</span>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
-        <button class="tbtn" style="color:var(--green);border-color:var(--gb);" onclick="openPagar('${item.id}')">Pagar</button>
+        <button class="tbtn" style="color:${(item.fluxo||'saida')==='entrada'?'var(--green)':'var(--green)'};border-color:var(--gb);" onclick="openPagar('${item.id}')">${(item.fluxo||'saida')==='entrada'?'Receber':'Pagar'}</button>
         <button class="tbtn" onclick="openAdiar('${item.id}')">Adiar</button>
         <button class="tbtn" onclick="openEditAgenda('${item.id}')">Editar</button>
         <button class="tbtn del" onclick="delAgendaItem('${item.id}')">Excluir</button>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = '';
+  if(sortedRec.length){
+    html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--green);padding:8px 6px 4px;font-weight:600;">Receitas</div>`;
+    html += sortedRec.map(renderItem).join('');
+  }
+  if(sortedRec.length && sortedDesp.length){
+    html += `<div style="border-top:2px solid var(--border2);margin:4px 0;"></div>`;
+  }
+  if(sortedDesp.length){
+    html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--red);padding:8px 6px 4px;font-weight:600;">Despesas</div>`;
+    html += sortedDesp.map(renderItem).join('');
+  }
+  el.innerHTML = html;
 }
 
 // ── MODALS AGENDA ──
 let _agTipo = 'recorrente';
+
+function populateCatSelByFluxo(id, fluxo){
+  const sel = document.getElementById(id);
+  if(!sel) return;
+  // For receita: show 'entrada' categories, or all if none exist
+  // For despesa: show 'despesa' categories
+  const tipo = fluxo === 'entrada' ? 'entrada' : 'despesa';
+  let cats = STATE.categorias.filter(c => c.tipo === tipo);
+  // If no 'entrada' categories exist yet, show a default set
+  if(fluxo === 'entrada' && !cats.length){
+    cats = [
+      {nome:'Salário CLT'}, {nome:'Freelance'}, {nome:'MEI / PJ'},
+      {nome:'Aluguel recebido'}, {nome:'Investimentos'}, {nome:'Outros'}
+    ];
+  }
+  sel.innerHTML = cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+}
+
+function setAgTipo(fluxo){
+  document.getElementById('agFluxo').value = fluxo;
+  const bDesp = document.getElementById('agTipoDesp');
+  const bRec  = document.getElementById('agTipoRec');
+  if(fluxo==='saida'){
+    bDesp.style.opacity='1'; bRec.style.opacity='.4';
+    bDesp.classList.add('out'); bDesp.classList.remove('in');
+    bRec.classList.remove('out');
+  } else {
+    bRec.style.opacity='1'; bDesp.style.opacity='.4';
+    bRec.classList.add('in'); bDesp.classList.remove('out');
+  }
+  // Repopulate category select based on fluxo
+  populateCatSelByFluxo('agCat', fluxo);
+}
+
+function onDiaSelectChange(val){
+  const diaInput = document.getElementById('agDia');
+  if(val==='quinto_util'){
+    diaInput.style.display='none';
+    diaInput.value='0';
+  } else {
+    diaInput.style.display='block';
+    if(diaInput.value==='0') diaInput.value='';
+  }
+}
 
 function openAgendaModal(tipo){
   _agTipo = tipo;
@@ -2302,9 +2664,11 @@ function openAgendaModal(tipo){
   document.getElementById('agValor').value = '';
   document.getElementById('agDesc').value = '';
   document.getElementById('agDia').value = '';
+  document.getElementById('agDia').style.display = 'block';
+  document.getElementById('agDiaSelect').value = 'dia_fixo';
   document.getElementById('agData').value = today();
   document.getElementById('agParcela').value = '';
-  populateCatSel('agCat');
+  setAgTipo('saida'); // also populates agCat
   document.getElementById('agDiaGrp').style.display  = tipo==='unico'?'none':'block';
   document.getElementById('agDataGrp').style.display = tipo==='unico'?'block':'none';
   document.getElementById('agPeriodGrp').style.display = tipo==='assinatura'?'block':'none';
@@ -2330,8 +2694,12 @@ function openEditAgenda(id){
   document.getElementById('agDia').value = item.dia_vencimento;
   document.getElementById('agData').value = item.data_unica||today();
   setCurrencyVal('agParcela', item.valor_parcela);
-  populateCatSel('agCat');
+  populateCatSelByFluxo('agCat', item.fluxo||'saida');
   document.getElementById('agCat').value = item.categoria;
+  setAgTipo(item.fluxo||'saida');
+  const isQU = item.quinto_util==='sim';
+  document.getElementById('agDiaSelect').value = isQU ? 'quinto_util' : 'dia_fixo';
+  document.getElementById('agDia').style.display = isQU ? 'none' : 'block';
   document.getElementById('agDiaGrp').style.display  = item.tipo==='unico'?'none':'block';
   document.getElementById('agDataGrp').style.display = item.tipo==='unico'?'block':'none';
   document.getElementById('agPeriodGrp').style.display = item.tipo==='assinatura'?'block':'none';
@@ -2356,12 +2724,16 @@ async function submitAgenda(){
   const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
   const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(getCurrencyVal('agParcela')):0;
   if(!nome){ alert('Digite o nome'); return; }
+  const fluxo = document.getElementById('agFluxo')?.value || 'saida';
+  const diaSelect = document.getElementById('agDiaSelect')?.value || 'dia_fixo';
+  const quintoUtil = diaSelect === 'quinto_util' ? 'sim' : 'nao';
   const payload = {
     tipo, nome, descricao:desc, categoria:cat,
     valor:String(valor), valor_parcela:String(parcela),
     periodicidade:period,
-    dia_vencimento:dia, data_unica:data,
-    recorrente:tipo==='unico'?'nao':'sim', status:'ativo'
+    dia_vencimento:quintoUtil==='sim'?'0':dia, data_unica:data,
+    recorrente:tipo==='unico'?'nao':'sim', status:'ativo',
+    fluxo, quinto_util:quintoUtil,
   };
   if(id){
     const item = STATE.agenda.find(a=>a.id===id);
@@ -2383,13 +2755,20 @@ async function submitAgenda(){
 function openPagar(id){
   const item = STATE.agenda.find(a=>a.id===id);
   if(!item) return;
+  const isReceita = (item.fluxo||'saida') === 'entrada';
   document.getElementById('pgId').value = id;
   document.getElementById('pgNome').value = item.nome;
   document.getElementById('pgCat').value = item.categoria;
+  document.getElementById('pgFluxo').value = item.fluxo||'saida';
   document.getElementById('pgData').value = today();
   setCurrencyVal('pgValor', item.valor);
   document.getElementById('pgDesc').value = item.nome;
-  document.getElementById('mPagarTit').textContent = `Pagar: ${item.nome}`;
+  document.getElementById('mPagarTit').textContent = isReceita ? `Confirmar recebimento: ${item.nome}` : `Confirmar pagamento: ${item.nome}`;
+  const btn = document.getElementById('pgConfirmBtn');
+  if(btn){
+    btn.textContent = isReceita ? '✓ Confirmar e lançar receita' : '✓ Confirmar e lançar no extrato';
+    btn.className = isReceita ? 'btn btn-green' : 'btn btn-green';
+  }
   openModal('mPagar');
 }
 
@@ -2412,10 +2791,12 @@ async function submitPagar(){
     const d = new Date(data);
     proxima = dsFromDate(new Date(d.getFullYear(), d.getMonth()+1, dia));
   }
+  const fluxo = document.getElementById('pgFluxo')?.value || 'saida';
   const lancId = 'ag'+Date.now();
-  const lanc = {id:lancId,data,tipo:'saida',descricao:desc||nome,categoria:cat,valor,mes,origem:'agenda'};
+  const lanc = {id:lancId,data,tipo:fluxo,descricao:desc||nome,categoria:cat,valor,mes,origem:'agenda'};
   STATE.lancamentos.push(lanc);
-  STATE.saldo = Math.round((STATE.saldo - valor)*100)/100;
+  if(fluxo==='entrada') STATE.saldo = Math.round((STATE.saldo + valor)*100)/100;
+  else STATE.saldo = Math.round((STATE.saldo - valor)*100)/100;
   STATE.saldoDate = fmtD(data);
   item.ultima_confirmacao = data;
   item.proxima_data = proxima;
@@ -2423,7 +2804,7 @@ async function submitPagar(){
   saveLocal();
   closeModal('mPagar');
   renderAll();
-  pushBg('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima});
+  pushBg('pagarAgenda',{id,data_pagamento:data,valor:String(valor),nome:desc||nome,categoria:cat,mes,proxima_data:proxima,fluxo});
   pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
