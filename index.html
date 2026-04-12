@@ -303,6 +303,95 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .week-day-row:last-child{border-bottom:none;}
 .week-day-label{min-width:110px;color:var(--text3);}
 .week-day-vals{display:flex;gap:10px;flex:1;flex-wrap:wrap;}
+/* ═══════════════════════════════════════
+   MOBILE RESPONSIVE
+   ═══════════════════════════════════════ */
+
+/* Desktop: show table, hide cards */
+.ext-cards{display:none;}
+
+@media(max-width:600px){
+  /* NAV — prevent horizontal overflow */
+  .nav-inner{padding:0 .75rem;gap:4px;height:52px;}
+  .nav-brand{font-size:11px;}
+  .nav-tabs{gap:1px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:1;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .ntab{padding:5px 9px;font-size:11px;white-space:nowrap;}
+  .nav-actions{gap:3px;flex-shrink:0;}
+  .icon-btn{padding:4px 7px;font-size:11px;gap:2px;}
+  #syncTxt, #privTxt{display:none;}
+  #yearSelector{max-width:54px;padding:4px 4px!important;}
+
+  /* PAGES */
+  .page{padding:.9rem .75rem 5rem;}
+
+  /* SALDO HERO */
+  .saldo-top{gap:8px;}
+  .saldo-btn{padding:6px 12px;font-size:12px;}
+  .saldo-valor{font-size:1.6rem;}
+  .rec-cat{display:none;}
+
+  /* KPI */
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi{padding:.65rem .75rem;}
+  .kpi-val{font-size:1rem;}
+  .kpi-label{font-size:10px;}
+
+  /* GOALS */
+  .goals-grid{grid-template-columns:1fr;}
+  .goal-hdr{flex-direction:column;gap:6px;align-items:flex-start;}
+  .goal-acts{flex-wrap:wrap;gap:4px;}
+
+  /* MONTH TABS */
+  .mtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+  .mtabs::-webkit-scrollbar{display:none;}
+  .mtab{flex-shrink:0;font-size:11px;padding:4px 10px;}
+
+  /* CHART */
+  .chart-wrap{height:190px;}
+
+  /* MODAL — slide up from bottom */
+  .overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:20px 20px 0 0;max-width:100%;max-height:92vh;padding:1.2rem 1rem 2.5rem;}
+
+  /* EXTRATO — cards instead of table */
+  .ext-wrap{display:none;}
+  .ext-cards{display:flex;flex-direction:column;gap:8px;}
+  .ext-filters{gap:6px;}
+  .ext-filters input{min-width:0;width:100%;}
+  .period-picker{min-width:calc(100vw - 1.5rem);left:50%;transform:translateX(-50%);right:auto;}
+
+  /* AGENDA */
+  .agenda-row-acts{flex-wrap:wrap;gap:4px;}
+
+  /* AI */
+  .ai-panel-hdr{flex-direction:column;align-items:flex-start;gap:8px;}
+  .chat-msgs{height:260px;}
+
+  /* TWO-COL already handled by existing rule */
+  .sec{flex-wrap:wrap;gap:4px;}
+  .cbar-w{display:none;}
+}
+
+@media(min-width:601px) and (max-width:900px){
+  .nav-inner{padding:0 1rem;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+}
+
+/* Ext card styles (mobile extrato) */
+.ext-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.8rem 1rem;transition:background .12s;}
+.ext-card:active{background:var(--surface);}
+.ext-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px;}
+.ext-card-desc{font-size:13px;color:var(--text);font-weight:500;flex:1;line-height:1.4;}
+.ext-card-val{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ext-card-val.vpos{color:var(--green);}
+.ext-card-val.vneg{color:var(--red);}
+.ext-card-val.vtransf{color:var(--text3);}
+.ext-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.ext-card-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.ext-card-date{font-size:11px;color:var(--text3);}
+.ext-card-cat{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface);color:var(--text3);}
+.ext-card-acts{display:flex;gap:4px;}
 </style>
 </head>
 <body>
@@ -323,7 +412,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       </select>
       <button class="icon-btn" id="syncBtn" onclick="syncData()"><span class="spinner" id="syncSpinner" style="display:none"></span><span id="syncTxt">⟳ Sync</span></button>
       <button class="icon-btn" id="privBtn" onclick="togglePrivacy()">👁 <span id="privTxt">Ocultar</span></button>
-      <button class="icon-btn" onclick="showSetup()">⚙</button>
+      <button class="icon-btn" onclick="showSetup()" title="Configurações">⚙</button>
     </div>
   </div>
 </nav>
@@ -458,6 +547,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
           <tbody id="extTbody"></tbody>
         </table>
       </div>
+      <div class="ext-cards" id="extCards"></div>
       <div class="pages" id="extPages"></div>
     </div>
   </div>
@@ -1685,15 +1775,38 @@ function rowHtml(l){
   </tr>`;
 }
 
+function cardHtml(l){
+  const transf = isTransfer(l);
+  const valClass = transf ? 'vtransf' : l.tipo==='entrada' ? 'vpos' : 'vneg';
+  const valPrefix = transf ? '↔ ' : l.tipo==='entrada' ? '+' : '−';
+  return `<div class="ext-card">
+    <div class="ext-card-top">
+      <span class="ext-card-desc sv">${l.descricao}${transf?` <span style="font-size:10px;color:var(--text3)">↔</span>`:''}</span>
+      <span class="ext-card-val ${valClass} sv">${valPrefix}${BRL(l.valor)}</span>
+    </div>
+    <div class="ext-card-bottom">
+      <div class="ext-card-meta">
+        <span class="ext-card-date">${fmtD(l.data)}</span>
+        <span class="ext-card-cat">${l.categoria}</span>
+      </div>
+      <div class="ext-card-acts">
+        <button class="tbtn" onclick="openEdit('${l.id}')">✏</button>
+        <button class="tbtn del" onclick="openDel('${l.id}')">✕</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderExtrato(){
-  extVisible = EXT_PAGE_SZ; // reset on filter change
+  extVisible = EXT_PAGE_SZ;
   const list=getExtFiltered();
   const tb=document.getElementById('extTbody');
-  if(!tb)return;
+  const cards=document.getElementById('extCards');
   const slice = list.slice(0, extVisible);
-  tb.innerHTML = !slice.length
-    ? `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">Nenhum lançamento encontrado</td></tr>`
-    : slice.map(rowHtml).join('');
+  const emptyRow = `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text3);">Nenhum lançamento encontrado</td></tr>`;
+  const emptyCard = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Nenhum lançamento encontrado</div>`;
+  if(tb) tb.innerHTML = !slice.length ? emptyRow : slice.map(rowHtml).join('');
+  if(cards) cards.innerHTML = !slice.length ? emptyCard : slice.map(cardHtml).join('');
   renderExtratoFooter(list);
 }
 
@@ -1701,11 +1814,10 @@ function showMoreExtrato(){
   const list = getExtFiltered();
   extVisible = Math.min(extVisible + EXT_PAGE_SZ, list.length);
   const tb = document.getElementById('extTbody');
-  if(!tb) return;
-  // Append new rows without re-rendering existing ones
-  const newRows = list.slice(extVisible - EXT_PAGE_SZ, extVisible);
-  // Actually just re-render the slice for simplicity — still fast
-  tb.innerHTML = list.slice(0, extVisible).map(rowHtml).join('');
+  const cards = document.getElementById('extCards');
+  const slice = list.slice(0, extVisible);
+  if(tb) tb.innerHTML = slice.map(rowHtml).join('');
+  if(cards) cards.innerHTML = slice.map(cardHtml).join('');
   renderExtratoFooter(list);
 }
 
