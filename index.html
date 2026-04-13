@@ -3098,14 +3098,21 @@ function pushBg(...args){
 // Calcula média dos últimos N meses com dados para uma categoria
 function mediaCategoria(cat, nMeses=3){
   const todayMes = today().slice(0,7);
-  // Pega todos os meses passados com dados para esta categoria
-  const mesesComDados = [...new Set(STATE.lancamentos
-    .filter(l => l.categoria===cat && l.tipo==='saida' && !isTransfer(l) && l.mes < todayMes)
-    .map(l => l.mes)
-  )].sort().slice(-nMeses);
-  if(!mesesComDados.length) return null;
-  const total = mesesComDados.reduce((s,m) => s + sumOut(m, cat), 0);
-  return Math.round(total / mesesComDados.length * 100) / 100;
+  // Get the last N calendar months before current
+  const [yr, mo] = todayMes.split('-').map(Number);
+  const meses = [];
+  for(let i=1; i<=nMeses; i++){
+    let mm = mo - i, yy = yr;
+    if(mm <= 0){ mm += 12; yy--; }
+    meses.push(`${yy}-${String(mm).padStart(2,'0')}`);
+  }
+  // Sum each month (0 if no data)
+  const totals = meses.map(m => sumOut(m, cat));
+  const hasAnyData = totals.some(v => v > 0);
+  if(!hasAnyData) return null;
+  // Always divide by nMeses — missing months count as zero
+  const total = totals.reduce((s,v) => s+v, 0);
+  return Math.round(total / nMeses * 100) / 100;
 }
 
 
