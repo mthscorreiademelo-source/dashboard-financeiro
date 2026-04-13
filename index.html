@@ -17,25 +17,38 @@
   --purple:#a78bfa;--teal:#2dd4bf;--orange:#fb923c;--pink:#f472b6;
   --r:12px;--rs:8px;
 }
+body.light{
+  --bg:#f4f4f6;--surface:#ffffff;--surface2:#f0f0f4;--surface3:#e4e4ec;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a24;--text2:#505060;--text3:#9090a0;
+  --gdim:rgba(16,185,129,0.1);--rdim:rgba(239,68,68,0.08);
+  --adim:rgba(245,158,11,0.1);--bdim:rgba(59,130,246,0.1);
+  --green:#059669;--red:#dc2626;--amber:#d97706;--blue:#2563eb;
+}
+body.light .nav{background:rgba(244,244,246,0.96);}
+body.light input,body.light select{color-scheme:light;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh;}
 input,select,button,textarea{font-family:inherit;font-size:14px;}
 
 /* NAV */
 .nav{position:sticky;top:0;z-index:100;background:rgba(15,15,17,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border2);}
-.nav-inner{max-width:1140px;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;gap:8px;height:56px;}
-.nav-brand{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+.nav-inner{max-width:1140px;margin:0 auto;padding:0 1.5rem;display:flex;flex-direction:column;}
+.nav-top{display:flex;align-items:center;gap:8px;height:48px;}
+.nav-bottom{display:flex;align-items:center;gap:2px;height:36px;border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+.nav-bottom::-webkit-scrollbar{display:none;}
+.nav-brand{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;flex:1;}
 .nav-brand span{color:var(--text);}
-.nav-tabs{display:flex;gap:4px;flex:1;}
-.ntab{padding:6px 14px;border-radius:var(--rs);border:none;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nav-tabs{display:flex;gap:2px;align-items:center;}
+.ntab{padding:6px 12px;border-radius:var(--rs);border:none;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .ntab:hover{color:var(--text);background:var(--surface2);}
 .ntab.active{background:var(--surface2);color:var(--text);font-weight:500;}
 .ntab.active.t-extrato{background:var(--bdim);color:var(--blue);}
 .ntab.active.t-analise{background:var(--adim);color:var(--amber);}
 .ntab.active.t-agenda{background:rgba(45,212,191,.1);color:var(--teal);}
 .ntab.active.t-assinaturas{background:rgba(167,139,250,.1);color:#a78bfa;}
-.nav-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
-.icon-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nav-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+.icon-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .icon-btn:hover{border-color:var(--border2);color:var(--text);}
 .icon-btn.active{background:var(--adim);border-color:var(--ab);color:var(--amber);}
 
@@ -317,13 +330,12 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .ext-cards{display:none;}
 
 @media(max-width:600px){
-  /* NAV — prevent horizontal overflow */
-  .nav-inner{padding:0 .75rem;gap:4px;height:52px;}
+  /* NAV — two line compact */
+  .nav-inner{padding:0 .75rem;}
+  .nav-top{height:42px;gap:4px;}
+  .nav-bottom{height:34px;}
   .nav-brand{font-size:11px;}
-  .nav-tabs{gap:1px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:1;}
-  .nav-tabs::-webkit-scrollbar{display:none;}
-  .ntab{padding:5px 9px;font-size:11px;white-space:nowrap;}
-  .nav-actions{gap:3px;flex-shrink:0;}
+  .nav-actions{gap:3px;}
   .icon-btn{padding:4px 7px;font-size:11px;gap:2px;}
   #syncTxt, #privTxt{display:none;}
   #yearSelector{max-width:54px;padding:4px 4px!important;}
@@ -405,21 +417,24 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 <!-- NAV -->
 <nav class="nav">
   <div class="nav-inner">
-    <span class="nav-brand">Dashboard · <span>Financeiro</span></span>
-    <div class="nav-tabs">
-      <button class="ntab active" data-page="dashboard">Dashboard</button>
+    <div class="nav-top">
+      <span class="nav-brand">Dashboard · <span>Financeiro</span></span>
+      <div class="nav-actions">
+        <select class="icon-btn" id="yearSelector" onchange="changeYear(this.value)" style="cursor:pointer;padding:5px 8px;">
+          <option value="">Ano</option>
+        </select>
+        <button class="icon-btn" id="syncBtn" onclick="syncData()"><span class="spinner" id="syncSpinner" style="display:none"></span><span id="syncTxt">⟳ Sync</span></button>
+        <button class="icon-btn" id="privBtn" onclick="togglePrivacy()">👁 <span id="privTxt">Ocultar</span></button>
+        <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+        <button class="icon-btn" onclick="showSetup()" title="Configurações">⚙</button>
+      </div>
+    </div>
+    <div class="nav-bottom">
+      <button class="ntab active" data-page="dashboard">Visão Geral</button>
       <button class="ntab t-extrato" data-page="extrato">Extrato</button>
       <button class="ntab t-agenda" data-page="agenda">Agenda</button>
       <button class="ntab t-assinaturas" data-page="assinaturas">Assinaturas</button>
-      <button class="ntab t-analise" data-page="analise">Análise IA</button>
-    </div>
-    <div class="nav-actions">
-      <select class="icon-btn" id="yearSelector" onchange="changeYear(this.value)" style="cursor:pointer;padding:5px 10px;">
-        <option value="">Ano</option>
-      </select>
-      <button class="icon-btn" id="syncBtn" onclick="syncData()"><span class="spinner" id="syncSpinner" style="display:none"></span><span id="syncTxt">⟳ Sync</span></button>
-      <button class="icon-btn" id="privBtn" onclick="togglePrivacy()">👁 <span id="privTxt">Ocultar</span></button>
-      <button class="icon-btn" onclick="showSetup()" title="Configurações">⚙</button>
+      <button class="ntab t-analise" data-page="analise">Assistente IA</button>
     </div>
   </div>
 </nav>
@@ -3079,6 +3094,13 @@ function excluirMeta(nome){
   pushBg('deleteMeta',{nome});
 }
 
+function toggleTheme(){
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('df_theme', isLight ? 'light' : 'dark');
+  if(chartInst) renderChart();
+}
+
 function togglePrivacy(){
   privOn=!privOn;
   document.body.classList.toggle('prv',privOn);
@@ -3104,6 +3126,11 @@ document.querySelectorAll('.rtab[data-rt]').forEach(b=>b.addEventListener('click
 // ═══════════════════════════════════════
 setSyncStatus('off');
 bindCurrencyInputs();
+// Restore theme
+if(localStorage.getItem('df_theme')==='light'){
+  document.body.classList.add('light');
+  document.getElementById('themeBtn').textContent='☀️';
+}
 init();
 </script>
 </body>
