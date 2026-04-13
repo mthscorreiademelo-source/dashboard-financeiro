@@ -3164,9 +3164,10 @@ function renderOrcamento(){
             <span style="font-size:10px;color:var(--text3);padding:2px 7px;background:var(--surface2);border-radius:8px;">sem limite</span>
           </div>`;
         }
-        const pct = Math.min(100, Math.round(gasto/limite*100));
-        const barColor = pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
-        const statusLabel = pct>=100?'⚠ Acima':'';
+        const pct = Math.round(gasto/limite*100);
+        const pct100 = Math.min(100,pct);
+        const barColor = pct>100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
+        const statusLabel = pct>100 ? '⚠ Acima do limite' : '';
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
             <span class="cdot" style="background:${color}"></span>
@@ -3176,7 +3177,7 @@ function renderOrcamento(){
             ${statusLabel?`<span style="font-size:10px;color:var(--red);font-weight:600;">${statusLabel}</span>`:''}
           </div>
           <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s;"></div>
+            <div style="height:100%;width:${pct100}%;background:${barColor};border-radius:3px;transition:width .4s;"></div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:3px;">
             <span style="font-size:10px;color:var(--text3);">${pct}% do limite</span>
@@ -3278,7 +3279,7 @@ function renderOrcAlerts(mes){
       if(!limite) return null;
       const gasto = sumOut(mes, c.nome);
       const pct = gasto/limite*100;
-      if(pct<80) return null;
+      if(pct<=100) return null; // no alert at exactly 100% (fixed costs)
       return {cat:c.nome, gasto, limite, pct, color:getCatColor(c.nome)};
     }).filter(Boolean);
 
@@ -3305,11 +3306,11 @@ function sumOrcamentoMonth(m){
 // Orçamento usado no gráfico: apenas para meses futuros onde não há lançamentos
 function sumOrcamentoProjected(m){
   const todayMes = today().slice(0,7);
-  if(m <= todayMes) return 0; // only future months
+  if(m < todayMes) return 0; // only current and future months
   const realExp = sumOut(m);
   const agendaExp = sumAgendaExpenseMonth(m);
   const orcTotal = sumOrcamentoMonth(m);
-  // Return what's not already covered by agenda
+  // Return what's not already covered by real spending or agenda
   return Math.max(0, orcTotal - agendaExp - realExp);
 }
 
@@ -3320,7 +3321,7 @@ function renderOrcAlertsDashboard(){
     if(!limite) return null;
     const gasto = sumOut(mes, c.nome);
     const pct = gasto/limite*100;
-    return pct>=80 ? {cat:c.nome, pct} : null;
+    return pct>100 ? {cat:c.nome, pct} : null; // only alert when strictly over limit
   }).filter(Boolean);
   let el = document.getElementById('orcAlertDash');
   if(!el){
