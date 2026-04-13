@@ -3098,35 +3098,34 @@ function pushBg(...args){
 // Calcula média dos últimos N meses com dados para uma categoria
 function mediaCategoria(cat, nMeses=3){
   const todayMes = today().slice(0,7);
-  // Get the last N calendar months before current
   const [yr, mo] = todayMes.split('-').map(Number);
+  // Get the last N calendar months
   const meses = [];
   for(let i=1; i<=nMeses; i++){
     let mm = mo - i, yy = yr;
     if(mm <= 0){ mm += 12; yy--; }
     meses.push(`${yy}-${String(mm).padStart(2,'0')}`);
   }
-  // Sum each month (0 if no data)
-  const totals = meses.map(m => sumOut(m, cat));
-  const hasAnyData = totals.some(v => v > 0);
-  if(!hasAnyData) return null;
-  // Always divide by nMeses — missing months count as zero
-  const total = totals.reduce((s,v) => s+v, 0);
-  return Math.round(total / nMeses * 100) / 100;
+  // Only consider months with actual spending
+  const valores = meses.map(m => sumOut(m, cat)).filter(v => v > 0);
+  if(!valores.length) return null;
+  const total = valores.reduce((s,v) => s+v, 0);
+  return Math.round(total / valores.length * 100) / 100;
 }
 
 
 
 // Retorna o limite efetivo para uma categoria num mês específico
 function getLimite(cat, mes){
-  const orc = STATE.orcamento.find ? STATE.orcamento.find(o=>o.categoria===cat) :
-    (Array.isArray(STATE.orcamento) ? STATE.orcamento.find(o=>o.categoria===cat) : null);
+  const orc = Array.isArray(STATE.orcamento) ? STATE.orcamento.find(o=>o.categoria===cat) : null;
   if(!orc) return null;
-  // Check for month exception
+  // Check for month-specific exception first
   if(orc.limites_especificos && orc.limites_especificos[mes] !== undefined){
-    return orc.limites_especificos[mes];
+    const v = orc.limites_especificos[mes];
+    return v === null ? null : parseFloat(v)||0;
   }
-  return orc.limite_padrao || null;
+  // Fall back to default limit
+  return orc.limite_padrao === null || orc.limite_padrao === undefined ? null : parseFloat(orc.limite_padrao)||0;
 }
 
 function setLimite(cat, valor, mes){
@@ -3339,7 +3338,7 @@ function renderOrcamento(){
 
   const gastoMes = allCats.map(cat=>({
     cat, gasto: sumOut(mes, cat), limite: getLimite(cat, mes)
-  })).filter(x=>x.gasto>0||x.limite);
+  })).filter(x=>x.gasto>0||x.limite!=null);
 
   if(progressEl){
     if(!gastoMes.length){
@@ -3347,12 +3346,28 @@ function renderOrcamento(){
     } else {
       const rows = gastoMes.map(({cat, gasto, limite})=>{
         const color = getCatColor(cat);
-        if(!limite){
+        if(limite==null){
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
             <span class="cdot" style="background:${color}"></span>
             <span style="flex:1;font-size:13px;color:var(--text2);">${cat}</span>
             <span style="font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums;">${BRL(gasto)}</span>
             <span style="font-size:10px;color:var(--text3);padding:2px 7px;background:var(--surface2);border-radius:8px;">sem limite</span>
+          </div>`;
+        }
+        // limite === 0 means "goal: spend nothing"
+        if(limite === 0){
+          const temGasto = gasto > 0;
+          return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="cdot" style="background:${color}"></span>
+              <span style="flex:1;font-size:13px;color:var(--text);">${cat}</span>
+              ${temGasto
+                ? `<span style="font-size:12px;font-variant-numeric:tabular-nums;font-weight:500;color:var(--red);" class="sv">${BRL(gasto)}</span>
+                   <span style="font-size:10px;color:var(--red);font-weight:600;padding:2px 8px;background:var(--rdim);border:1px solid var(--rb);border-radius:8px;">⚠ Meta: R$ 0,00</span>`
+                : `<span style="font-size:10px;color:var(--text3);padding:2px 8px;background:var(--surface2);border-radius:8px;">🚫 Meta: R$ 0,00</span>
+                   <span style="font-size:11px;color:var(--green);">✓ Sem gastos</span>`
+              }
+            </div>
           </div>`;
         }
         const pct = Math.round(gasto/limite*100);
@@ -3473,9 +3488,10 @@ function renderOrcAlerts(mes){
       const limite = getLimite(c.nome, mes);
       if(!limite) return null;
       const gasto = sumOut(mes, c.nome);
+      if(limite === 0) return gasto > 0 ? {cat:c.nome, gasto, limite:0, pct:Infinity, color:getCatColor(c.nome)} : null;
       const pct = gasto/limite*100;
       if(pct<=100) return null; // no alert at exactly 100% (fixed costs)
-      return {cat:c.nome, gasto, limite, pct, color:getCatColor(c.nome)};
+      return {cat:c.nome, gasto, limite, pct: Math.min(pct, 999), color:getCatColor(c.nome)};
     }).filter(Boolean);
 
   if(!alertas.length){ el.innerHTML=''; return; }
