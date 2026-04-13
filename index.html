@@ -1952,6 +1952,7 @@ function renderGoals(){
           <div class="goal-acts">
             <button class="goal-btn save" onclick="openMeta('${g.nome}','guardar')">Guardar</button>
             <button class="goal-btn take" onclick="openMeta('${g.nome}','retirar')">Retirar</button>
+            <button class="goal-btn" style="padding:3px 8px;font-size:10px;background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);color:#a78bfa;" onclick="openMeta('${g.nome}','rendimento')">Rendimentos</button>
             <button class="goal-btn" style="padding:3px 8px;font-size:10px;background:var(--surface2);border-color:var(--border2);color:var(--text2);" onclick="openMetaEdit('${g.nome}')">✏</button>
             <button class="goal-btn" style="padding:3px 8px;font-size:10px;background:var(--surface2);border-color:var(--border2);color:var(--text3);" onclick="arquivarMeta('${g.nome}')">📦</button>
           </div>
@@ -1967,7 +1968,7 @@ function renderGoals(){
           const ap = getAporteMes(g.nome, today().slice(0,7));
           const pp = mm>0?Math.round(ap/mm*100):0;
           const stars = starBadge(pp);
-          const bc = ap===0?'var(--surface2)':pp>100?'var(--amber)':pp===100?'#16a34a':'#4ade80';
+          const bc = ap===0?'var(--surface2)':pp>100?'#f5c518':pp===100?'#16a34a':'#4ade80';
           return mm>0?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3);margin-bottom:4px;">
               <span>Aporte este mês ${stars}</span>
@@ -2453,9 +2454,25 @@ function submitLanc(){
 function openMeta(nome,acao){
   metaNome=nome; metaAcao=acao;
   const meta=STATE.metas.find(m=>m.nome===nome);
-  document.getElementById('mMetaTit').textContent=acao==='guardar'?`Guardar em ${meta?.label||nome}`:`Retirar de ${meta?.label||nome}`;
-  document.getElementById('mMetaBtn').textContent=acao==='guardar'?'Guardar':'Retirar';
-  document.getElementById('mMetaBtn').className='btn '+(acao==='guardar'?'btn-green':'btn-red');
+  const titles = {
+    guardar: `Guardar em ${meta?.label||nome}`,
+    retirar: `Retirar de ${meta?.label||nome}`,
+    rendimento: `Rendimentos — ${meta?.label||nome}`,
+  };
+  const btnLabels = {guardar:'Guardar', retirar:'Retirar', rendimento:'Adicionar rendimento'};
+  const btnClasses = {guardar:'btn btn-green', retirar:'btn btn-red', rendimento:'btn'};
+  document.getElementById('mMetaTit').textContent = titles[acao]||titles.guardar;
+  document.getElementById('mMetaBtn').textContent = btnLabels[acao]||'Confirmar';
+  document.getElementById('mMetaBtn').className = btnClasses[acao]||'btn btn-green';
+  if(acao==='rendimento'){
+    document.getElementById('mMetaBtn').style.background='rgba(167,139,250,.2)';
+    document.getElementById('mMetaBtn').style.borderColor='rgba(167,139,250,.5)';
+    document.getElementById('mMetaBtn').style.color='#a78bfa';
+  } else {
+    document.getElementById('mMetaBtn').style.background='';
+    document.getElementById('mMetaBtn').style.borderColor='';
+    document.getElementById('mMetaBtn').style.color='';
+  }
   document.getElementById('mValor').value='';
   document.getElementById('mData').value=today();
   document.getElementById('mDesc').value='';
@@ -2475,20 +2492,28 @@ function submitMeta(){
     if(valor>STATE.saldo){alert('Saldo insuficiente em conta');return;}
     meta.saldo=Math.round((meta.saldo+valor)*100)/100;
     STATE.saldo=Math.round((STATE.saldo-valor)*100)/100;
-  } else {
+  } else if(metaAcao==='retirar'){
     if(valor>meta.saldo){alert('Saldo insuficiente na caixinha');return;}
     meta.saldo=Math.round((meta.saldo-valor)*100)/100;
     STATE.saldo=Math.round((STATE.saldo+valor)*100)/100;
+  } else if(metaAcao==='rendimento'){
+    // Rendimento: only adds to caixinha, does not affect main balance
+    meta.saldo=Math.round((meta.saldo+valor)*100)/100;
   }
   STATE.saldoDate=fmtD(data);
-  const catLabel=metaAcao==='guardar'?`Depósito → ${meta.label}`:`Retirada ← ${meta.label}`;
-  const lanc={id:'m'+Date.now(),data,tipo:metaAcao==='guardar'?'saida':'entrada',descricao:desc||catLabel,categoria:catLabel,valor,mes:mesKey(data),origem:'caixinha'};
+  const catLabel = metaAcao==='guardar' ? `Depósito → ${meta.label}`
+    : metaAcao==='retirar' ? `Retirada ← ${meta.label}`
+    : `Rendimentos → ${meta.label}`;
+  const tipoLanc = metaAcao==='retirar' ? 'entrada' : 'saida';
+  const lanc={id:'m'+Date.now(),data,tipo:tipoLanc,descricao:desc||catLabel,categoria:catLabel,valor,mes:mesKey(data),origem:'caixinha'};
   STATE.lancamentos.push(lanc);
   saveLocal();
   closeModal('mMeta');
   renderAll();
   pushBg('updateMeta',{nome:meta.nome,saldo:String(meta.saldo),data:STATE.saldoDate});
-  pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  if(metaAcao!=='rendimento'){
+    pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
+  }
   pushBg('addLancamento',{...lanc,valor:String(valor)});
 }
 
@@ -3174,9 +3199,9 @@ function getAporteMes(nome, mes){
 }
 
 function starBadge(pct){
-  if(pct >= 150) return '<span style="color:var(--amber);font-size:13px;" title="150%+">⭐⭐⭐</span>';
-  if(pct >= 120) return '<span style="color:var(--amber);font-size:13px;" title="120%+">⭐⭐</span>';
-  if(pct >= 100) return '<span style="color:var(--amber);font-size:13px;" title="100%+">⭐</span>';
+  if(pct >= 150) return '<span style="color:#f5c518;font-size:13px;filter:drop-shadow(0 0 3px rgba(245,197,24,.5));" title="150%+">⭐⭐⭐</span>';
+  if(pct >= 120) return '<span style="color:#f5c518;font-size:13px;filter:drop-shadow(0 0 2px rgba(245,197,24,.4));" title="120%+">⭐⭐</span>';
+  if(pct >= 100) return '<span style="color:#f5c518;font-size:13px;" title="100%+">⭐</span>';
   return '';
 }
 
@@ -3192,7 +3217,7 @@ function renderOrcMetas(mes){
     const pct = meta_mensal > 0 ? Math.round(aportado / meta_mensal * 100) : 0;
     const stars = starBadge(pct);
     const barColor = aportado === 0 ? 'var(--surface2)'
-      : pct > 100 ? 'var(--amber)'
+      : pct > 100 ? '#f5c518'   // gold for exceeding target
       : pct === 100 ? '#16a34a'   // dark green
       : '#4ade80';                 // light green
     const pctCapped = Math.min(100, pct);
