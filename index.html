@@ -3160,14 +3160,14 @@ function renderOrcConfig(){ renderOrcamento(); }
 // Get total aportes into a specific meta in a month
 function getAporteMes(nome, mes){
   const meta = STATE.metas.find(m=>m.nome===nome);
-  const label = (meta ? meta.label : nome).toLowerCase();
+  const label = meta ? meta.label : nome;
   const depositos = STATE.lancamentos.filter(l =>
     l.mes === mes && isTransfer(l) && l.tipo === 'saida' &&
-    (l.categoria || '').toLowerCase().includes(label)
+    (l.categoria || '') === 'Depósito → ' + label
   ).reduce((s,l) => s + l.valor, 0);
   const retiradas = STATE.lancamentos.filter(l =>
     l.mes === mes && isTransfer(l) && l.tipo === 'entrada' &&
-    (l.categoria || '').toLowerCase().includes(label)
+    (l.categoria || '') === 'Retirada ← ' + label
   ).reduce((s,l) => s + l.valor, 0);
   return Math.max(0, depositos - retiradas);
 }
@@ -3606,7 +3606,8 @@ function submitMetaEdit(){
     saveLocal();
     closeModal('mMetaEdit');
     renderGoals();
-    pushBg('updateMeta',{nome:nomeOriginal, saldo:String(saldoVal), meta:String(metaVal), label:nome, cor:color, data:STATE.saldoDate});
+    const labelAntigo = STATE.metas.find(m=>m.nome===nomeOriginal)?.label || '';
+    pushBg('updateMeta',{nome:nomeOriginal, saldo:String(saldoVal), meta:String(metaVal), label:nome, label_antigo:labelAntigo, cor:color, data:STATE.saldoDate});
   } else {
     const slug = nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
     const newMeta = {nome:slug, label:nome, saldo:saldoVal, meta:metaVal, color, archived:false};
