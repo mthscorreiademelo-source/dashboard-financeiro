@@ -3213,7 +3213,8 @@ function renderOrcamento(){
         }
         const pct = Math.round(gasto/limite*100);
         const pct100 = Math.min(100,pct);
-        const barColor = pct>100?'var(--red)':pct===100?'var(--blue)':pct>=80?'var(--amber)':'var(--green)';
+        const isExact100 = Math.abs(gasto - limite) < 0.01;
+        const barColor = pct>100?'var(--red)':isExact100?'var(--blue)':pct>=80?'var(--amber)':'var(--green)';
         const statusLabel = pct>100 ? '⚠ Acima do limite' : '';
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
