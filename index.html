@@ -3144,15 +3144,62 @@ function renderOrcamento(){
   const catsFromLimites = STATE.orcamento.map(o=>o.categoria);
   const allCats = [...new Set([...catsFromData, ...catsFromLimites])].sort();
 
-  // --- PROGRESS SECTION ---
+  // --- FINANCIAL HEALTH SUMMARY ---
   const progressEl = document.getElementById('orcProgress');
+  const totalLimite = allCats.reduce((s,c)=>s+(getLimite(c,mes)||0),0);
+  const totalGastoReal = sumOut(mes);
+  const totalMeta = sumMeta(mes); // aportes em caixinhas
+  const receitas = sumIn(mes);
+  const saldoDisponivel = STATE.saldo; // saldo atual em conta
+  // What's left after spending + limits + meta contributions
+  const comprometido = totalGastoReal + (totalLimite - totalGastoReal) + totalMeta;
+  const folga = receitas > 0
+    ? receitas - totalLimite - totalMeta
+    : saldoDisponivel - totalLimite;
+  const pctComprometido = receitas > 0 ? Math.round((totalLimite + totalMeta) / receitas * 100) : 0;
+  const folgaColor = folga >= 0 ? 'var(--green)' : 'var(--red)';
+  const folgaLabel = folga >= 0 ? 'Margem de segurança' : 'Déficit projetado';
+
+  const summaryHtml = totalLimite > 0 ? `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:12px;">
+        Saúde financeira — ${monthLabel(mes)}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">Receita do mês</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--green);font-variant-numeric:tabular-nums;" class="sv">+${BRL(receitas)}</div>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">Limite total de gastos</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums;" class="sv">−${BRL(totalLimite)}</div>
+        </div>
+        ${totalMeta > 0 ? `<div style="flex:1;min-width:120px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">Aportes em metas</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--blue);font-variant-numeric:tabular-nums;" class="sv">−${BRL(totalMeta)}</div>
+        </div>` : ''}
+        <div style="flex:1;min-width:120px;border-left:2px solid var(--border2);padding-left:12px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">${folgaLabel}</div>
+          <div style="font-size:1.1rem;font-weight:600;color:${folgaColor};font-variant-numeric:tabular-nums;" class="sv">${folga>=0?'+':''}${BRL(folga)}</div>
+        </div>
+      </div>
+      ${receitas > 0 ? `
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">
+        ${pctComprometido}% da receita comprometida com limites${totalMeta>0?' + metas':''}
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${Math.min(100,pctComprometido)}%;background:${pctComprometido>100?'var(--red)':pctComprometido>85?'var(--amber)':'var(--green)'};border-radius:3px;transition:width .4s;"></div>
+      </div>
+      ` : `<div style="font-size:11px;color:var(--text3);">Saldo em conta: <strong class="sv" style="color:var(--blue);">${BRL(saldoDisponivel)}</strong> · Limite planejado: <strong class="sv" style="color:var(--red);">${BRL(totalLimite)}</strong></div>`}
+    </div>` : '';
+
   const gastoMes = allCats.map(cat=>({
     cat, gasto: sumOut(mes, cat), limite: getLimite(cat, mes)
   })).filter(x=>x.gasto>0||x.limite);
 
   if(progressEl){
     if(!gastoMes.length){
-      progressEl.innerHTML = `<div class="empty" style="padding:1rem 0;">Nenhum dado ou limite configurado para ${monthLabel(mes)}.</div>`;
+      progressEl.innerHTML = summaryHtml + `<div class="empty" style="padding:1rem 0;">Nenhum dado ou limite configurado para ${monthLabel(mes)}.</div>`;
     } else {
       const rows = gastoMes.map(({cat, gasto, limite})=>{
         const color = getCatColor(cat);
@@ -3166,7 +3213,7 @@ function renderOrcamento(){
         }
         const pct = Math.round(gasto/limite*100);
         const pct100 = Math.min(100,pct);
-        const barColor = pct>100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
+        const barColor = pct>100?'var(--red)':pct===100?'var(--blue)':pct>=80?'var(--amber)':'var(--green)';
         const statusLabel = pct>100 ? '⚠ Acima do limite' : '';
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
@@ -3187,7 +3234,7 @@ function renderOrcamento(){
           </div>
         </div>`;
       }).join('');
-      progressEl.innerHTML = `<div class="card">${rows}</div>`;
+      progressEl.innerHTML = summaryHtml + `<div class="card">${rows}</div>`;
     }
   }
 
