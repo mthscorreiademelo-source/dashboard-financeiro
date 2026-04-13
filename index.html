@@ -3160,14 +3160,14 @@ function renderOrcConfig(){ renderOrcamento(); }
 // Get total aportes into a specific meta in a month
 function getAporteMes(nome, mes){
   const meta = STATE.metas.find(m=>m.nome===nome);
-  const label = meta ? meta.label : nome;
+  const label = (meta ? meta.label : nome).toLowerCase();
   const depositos = STATE.lancamentos.filter(l =>
     l.mes === mes && isTransfer(l) && l.tipo === 'saida' &&
-    (l.categoria || '') === 'Depósito → ' + label
+    (l.categoria || '').toLowerCase() === 'depósito → ' + label
   ).reduce((s,l) => s + l.valor, 0);
   const retiradas = STATE.lancamentos.filter(l =>
     l.mes === mes && isTransfer(l) && l.tipo === 'entrada' &&
-    (l.categoria || '') === 'Retirada ← ' + label
+    (l.categoria || '').toLowerCase() === 'retirada ← ' + label
   ).reduce((s,l) => s + l.valor, 0);
   return Math.max(0, depositos - retiradas);
 }
