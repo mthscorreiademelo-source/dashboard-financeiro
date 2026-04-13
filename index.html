@@ -124,10 +124,10 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .mtab.active{background:var(--bdim);border-color:var(--bb);color:var(--blue);font-weight:500;}
 
 /* ROW LINES */
-.rl{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.rl{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;}
 .rl:last-child{border-bottom:none;}
-.rl .lb{color:var(--text2);}
-.rl .vl{font-weight:500;font-variant-numeric:tabular-nums;}
+.rl .lb{color:var(--text2);min-width:0;}
+.rl .vl{font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;}
 .rl .vl.g{color:var(--green);}
 .rl .vl.r{color:var(--red);}
 .rl.total{border-top:1px solid var(--border2);margin-top:4px;padding-top:9px;font-weight:600;font-size:14px;border-bottom:none;}
@@ -295,33 +295,33 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
 
 /* DAY SUMMARY ROW (últimos 7 dias) */
-.day-sum-row{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.day-sum-row{display:flex;align-items:flex-start;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:12px;}
 .day-sum-row:last-child{border-bottom:none;}
-.day-sum-label{min-width:110px;color:var(--text2);}
-.day-sum-vals{display:flex;gap:10px;flex:1;flex-wrap:wrap;}
-.day-sum-inc{color:var(--green);font-variant-numeric:tabular-nums;}
-.day-sum-exp{color:var(--red);font-variant-numeric:tabular-nums;}
-.day-sum-inv{color:var(--blue);font-variant-numeric:tabular-nums;}
+.day-sum-label{min-width:120px;color:var(--text2);font-weight:500;padding-top:1px;}
+.day-sum-vals{display:flex;gap:8px;flex:1;flex-wrap:wrap;}
+.day-sum-inc{color:var(--green);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.day-sum-exp{color:var(--red);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.day-sum-inv{color:var(--blue);font-variant-numeric:tabular-nums;white-space:nowrap;}
 .day-sum-none{color:var(--text3);font-style:italic;}
 
 /* WEEK ACCORDION (este mês) */
 .week-block{border-bottom:1px solid var(--border);}
 .week-block:last-child{border-bottom:none;}
-.week-hdr{display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--rs);}
+.week-hdr{display:flex;align-items:flex-start;gap:8px;padding:10px 4px;cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--rs);}
 .week-hdr:hover{background:var(--surface2);}
-.week-arrow{font-size:11px;color:var(--text3);transition:transform .2s;width:14px;text-align:center;}
+.week-arrow{font-size:11px;color:var(--text3);transition:transform .2s;width:14px;text-align:center;padding-top:2px;flex-shrink:0;}
 .week-arrow.open{transform:rotate(90deg);}
 .week-range{flex:1;font-size:12px;font-weight:500;color:var(--text2);}
-.week-vals{display:flex;gap:10px;flex-wrap:wrap;}
-.week-inc{color:var(--green);font-size:12px;font-variant-numeric:tabular-nums;}
-.week-exp{color:var(--red);font-size:12px;font-variant-numeric:tabular-nums;}
-.week-inv{color:var(--blue);font-size:12px;font-variant-numeric:tabular-nums;}
+.week-vals{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.week-inc{color:var(--green);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.week-exp{color:var(--red);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.week-inv{color:var(--blue);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .week-days{display:none;padding:2px 0 4px 22px;border-top:1px solid var(--border);}
 .week-days.open{display:block;}
-.week-day-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.week-day-row{display:flex;align-items:flex-start;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);font-size:12px;}
 .week-day-row:last-child{border-bottom:none;}
-.week-day-label{min-width:110px;color:var(--text3);}
-.week-day-vals{display:flex;gap:10px;flex:1;flex-wrap:wrap;}
+.week-day-label{min-width:110px;color:var(--text3);flex-shrink:0;}
+.week-day-vals{display:flex;gap:8px;flex:1;flex-wrap:wrap;}
 /* ═══════════════════════════════════════
    MOBILE RESPONSIVE
    ═══════════════════════════════════════ */
@@ -1792,19 +1792,25 @@ function renderMonthContent(m){
     </div>
     ${agendaItems.length?`
     <div class="card" style="margin-top:12px;border-color:rgba(148,163,184,.2);border-style:dashed;">
-      <h3 style="color:#94a3b8;">Pagamentos programados — ${BRL(totalProg)}</h3>
-      <div class="cat-list">
+      <h3 style="color:#94a3b8;margin-bottom:.7rem;">Programados — ${BRL(totalProg)}</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
         ${agendaItems.map(a=>{
-          const dia=a.tipo==='unico'?fmtD(a.data_unica):`dia ${a.dia_vencimento}`;
-          const periLabel=a.tipo==='assinatura'?` · ${periLabel_(a.periodicidade)}`:'';
-          const color=getCatColor(a.categoria);
-          return `<div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--rs);opacity:.8;">
-            <span class="cdot" style="background:#94a3b8;border:1px dashed #94a3b8;background:transparent;"></span>
-            <span style="flex:1;font-size:13px;color:var(--text2);">${a.nome}</span>
-            <span style="font-size:11px;color:var(--text3);">${dia}${periLabel}</span>
-            <span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text3);">${a.categoria}</span>
-            <span style="font-size:12px;color:${(a.fluxo||'saida')==='entrada'?'#94a3b8':'#94a3b8'};min-width:74px;text-align:right;font-variant-numeric:tabular-nums;">${(a.fluxo||'saida')==='entrada'?'+':'−'}${BRL(a.valor)}</span>
-            <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="openPagar('${a.id}')">${(a.fluxo||'saida')==='entrada'?'Receber':'Pagar'}</button>
+          const isRec = (a.fluxo||'saida')==='entrada';
+          const dia = a.tipo==='unico' ? fmtD(a.data_unica) : (a.quinto_util==='sim'?'5º dia útil':`dia ${a.dia_vencimento}`);
+          const periLabel = a.tipo==='assinatura' ? ` · ${periLabel_(a.periodicidade)}` : '';
+          const valColor = isRec ? '#6ee7b7' : '#94a3b8';
+          return `<div style="background:var(--surface2);border-radius:var(--rs);padding:10px 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+              <span style="font-size:13px;font-weight:500;color:var(--text);flex:1;">${a.nome}</span>
+              <span style="font-size:14px;font-weight:600;color:${valColor};white-space:nowrap;font-variant-numeric:tabular-nums;">${isRec?'+':'−'}${BRL(a.valor)}</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                <span style="font-size:11px;color:var(--text3);">${dia}${periLabel}</span>
+                <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface);color:var(--text3);">${a.categoria}</span>
+              </div>
+              <button class="tbtn" style="font-size:11px;padding:4px 12px;${isRec?'color:var(--green);border-color:var(--gb);':''}" onclick="openPagar('${a.id}')">${isRec?'Receber':'Pagar'}</button>
+            </div>
           </div>`;
         }).join('')}
       </div>
