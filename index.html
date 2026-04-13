@@ -3104,17 +3104,23 @@ function loadOrcamento(){
 function populateOrcMesRef(){
   const sel = document.getElementById('orcMesRef');
   if(!sel) return;
+  const current = sel.value; // preserve current selection
   const mesAtual = today().slice(0,7);
-  // Show current month + next 6 months
   const options = [];
   for(let i=0; i<7; i++){
     const d = new Date();
     d.setDate(1);
     d.setMonth(d.getMonth() + i);
     const m = dsFromDate(d).slice(0,7);
-    options.push(`<option value="${m}"${m===mesAtual?' selected':''}>${monthLabel(m)}</option>`);
+    options.push(`<option value="${m}">${monthLabel(m)}</option>`);
   }
   sel.innerHTML = options.join('');
+  // Restore selection if it exists in the list, otherwise default to current month
+  if(current && [...sel.options].some(o=>o.value===current)){
+    sel.value = current;
+  } else {
+    sel.value = mesAtual;
+  }
 }
 
 function resetOrcExcecao(){
@@ -3132,8 +3138,13 @@ function resetOrcExcecao(){
 function renderOrcConfig(){ renderOrcamento(); }
 
 function renderOrcamento(){
+  // Read selected month BEFORE repopulating the select
+  const selEl = document.getElementById('orcMesRef');
+  const mesAntes = selEl?.value || today().slice(0,7);
   populateOrcMesRef();
-  const mes = document.getElementById('orcMesRef')?.value || today().slice(0,7);
+  // Restore selection after repopulate
+  if(selEl && mesAntes) selEl.value = mesAntes;
+  const mes = selEl?.value || today().slice(0,7);
   const mesAtual = today().slice(0,7);
   const isFuture = mes > mesAtual;
   const isCurrent = mes === mesAtual;
