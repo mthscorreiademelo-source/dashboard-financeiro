@@ -1235,7 +1235,7 @@ const getIn    = m => getByMes(m).filter(l => l.tipo === 'entrada' && !isTransfe
 const getOut   = m => getByMes(m).filter(l => l.tipo === 'saida'   && !isTransfer(l));
 const getMeta  = m => getByMes(m).filter(l => isTransfer(l) && l.tipo === 'saida');
 const sumIn    = m => getIn(m).reduce((s,l)  => s + l.valor, 0);
-const sumOut   = m => getOut(m).reduce((s,l) => s + l.valor, 0);
+const sumOut   = (m, cat) => getOut(m).filter(l=>!cat||l.categoria===cat).reduce((s,l) => s + l.valor, 0);
 const sumMeta  = m => getMeta(m).reduce((s,l) => s + l.valor, 0);
 const getCatColor = n => (STATE.categorias.find(c => c.nome === n) || {cor:'#888'}).cor;
 
@@ -3062,11 +3062,7 @@ function mediaCategoria(cat, nMeses=3){
   return Math.round(total / mesesComDados.length * 100) / 100;
 }
 
-function sumOut(m, cat){
-  return STATE.lancamentos
-    .filter(l => l.mes===m && l.tipo==='saida' && !isTransfer(l) && (!cat || l.categoria===cat))
-    .reduce((s,l) => s + l.valor, 0);
-}
+
 
 // Retorna o limite efetivo para uma categoria num mês específico
 function getLimite(cat, mes){
