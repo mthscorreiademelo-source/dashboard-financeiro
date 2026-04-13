@@ -3137,9 +3137,10 @@ function setLimite(cat, valor, mes){
   }
   if(mes){
     if(!orc.limites_especificos) orc.limites_especificos = {};
-    orc.limites_especificos[mes] = valor;
+    if(valor === null) delete orc.limites_especificos[mes];
+    else orc.limites_especificos[mes] = valor;
   } else {
-    orc.limite_padrao = valor;
+    orc.limite_padrao = valor; // can be 0 or null
   }
   localStorage.setItem('df_orcamento', JSON.stringify(STATE.orcamento));
 }
@@ -3456,14 +3457,13 @@ function usarMedia(cat, mes, media){
 }
 
 function salvarLimite(cat, mes, val){
-  const v = parseFloat(val)||null;
+  const v = val===''||val===null||val===undefined ? null : parseFloat(val);
   const mesAtual = today().slice(0,7);
   setLimite(cat, v, mes===mesAtual?null:mes);
-  // Save to Sheets
   const orc = STATE.orcamento.find(o=>o.categoria===cat);
   if(orc) pushBg('saveOrcamento',{
     categoria:cat,
-    limite_padrao:String(orc.limite_padrao||0),
+    limite_padrao:String(orc.limite_padrao ?? ''),
     limites_especificos:JSON.stringify(orc.limites_especificos||{}),
     ultima_atualizacao:today(),
   });
