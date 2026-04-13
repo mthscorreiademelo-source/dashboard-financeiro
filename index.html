@@ -720,13 +720,16 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <div class="ai-panel-hdr">
         <h3>Análise financeira completa</h3>
         <div class="ai-actions">
-          <button class="btn btn-blue" onclick="gerarAnalise('completa')">✦ Gerar análise</button>
+          <button class="btn btn-blue" onclick="gerarAnalise('ano')">✦ Análise deste ano</button>
+          <button class="btn btn-neu" onclick="gerarAnalise('trimestre')">📅 Último trimestre</button>
+          <button class="btn btn-neu" onclick="gerarAnalise('mes')">📆 Último mês</button>
+          <button class="btn btn-neu" onclick="gerarAnalise('projecao')">🔮 Análise e Projeções</button>
           <button class="btn btn-neu" onclick="gerarAnalise('metas')">📊 Foco nas metas</button>
           <button class="btn btn-neu" onclick="gerarAnalise('cortes')">✂ Onde cortar</button>
         </div>
       </div>
       <div class="ai-result" id="aiResult">
-        <span style="color:var(--text3);">Clique em "Gerar análise" para o Claude analisar seus dados financeiros e gerar insights personalizados.</span>
+        <span style="color:var(--text3);">Escolha um tipo de análise acima para o Claude analisar seus dados financeiros e gerar insights personalizados.</span>
       </div>
     </div>
 
@@ -2300,17 +2303,40 @@ async function gerarAnalise(tipo){
   el.className='ai-result loading';
   el.innerHTML='<span class="spinner"></span> Analisando seus dados...';
   try{
-    // 'completa' inclui todos os anos disponíveis, outros tipos usam o ano atual
-    const includeAll = tipo === 'completa';
+    // Determine data scope
+    const includeAll = tipo === 'projecao'; // projeções precisam de histórico completo
     const dados=getDataForAI(includeAll);
-    const anoCtx = includeAll ? 'todos os anos disponíveis' : String(curYear);
-    const system=`Você é um assistente financeiro pessoal especializado. Analise os dados financeiros fornecidos (${anoCtx}) e gere insights práticos e personalizados em português do Brasil. Seja direto, use valores reais dos dados, e formate sua resposta com títulos e listas para facilitar a leitura. Não use markdown com asteriscos — use texto simples com quebras de linha.`;
+
+    // Build context description
+    const hoje = today();
+    const mesAtual = hoje.slice(0,7);
+    const [yr, mo] = mesAtual.split('-').map(Number);
+
+    // Last trimester months
+    const trimMeses = [];
+    for(let i=1; i<=3; i++){
+      let mm = mo-i, yy = yr;
+      if(mm<=0){mm+=12;yy--;}
+      trimMeses.push(`${yy}-${String(mm).padStart(2,'0')}`);
+    }
+    const trimLabel = trimMeses.map(m=>monthLabel(m)).reverse().join(', ');
+
+    // Last month
+    let lm = mo-1, ly = yr;
+    if(lm<=0){lm+=12;ly--;}
+    const mesPasLabel = monthLabel(`${ly}-${String(lm).padStart(2,'0')}`);
+
+    const system=`Você é um assistente financeiro pessoal especializado. Analise os dados financeiros fornecidos e gere insights práticos e personalizados em português do Brasil. Seja direto, use valores reais dos dados, e formate sua resposta com títulos e listas para facilitar a leitura. Não use markdown com asteriscos — use texto simples com quebras de linha.`;
+
     const prompts={
-      completa:`Faça uma análise financeira completa dos dados abaixo (todos os períodos disponíveis). Identifique padrões de gastos, pontos críticos, o que está funcionando bem, e dê 3 recomendações práticas e priorizadas.\n\n${dados}`,
-      metas:`Analise o progresso das metas de poupança e dê uma projeção realista de quando serão atingidas com base no histórico de gastos e receitas de ${curYear}. Sugira como acelerar o progresso.\n\n${dados}`,
-      cortes:`Identifique onde é possível cortar gastos com base no histórico de ${curYear}. Priorize os cortes por impacto financeiro e facilidade de implementação. Seja específico com valores.\n\n${dados}`,
+      ano:`Faça uma análise financeira do ano ${curYear}. Identifique os padrões de gastos por categoria, maiores despesas, evolução mês a mês, o que está funcionando bem e 3 recomendações práticas priorizadas.\n\n${dados}`,
+      trimestre:`Analise os dados dos últimos 3 meses (${trimLabel}). Identifique tendências recentes, categorias que mais consumiram o orçamento, comparação entre os meses, e o que pode ser melhorado no próximo trimestre.\n\n${dados}`,
+      mes:`Analise detalhadamente ${mesPasLabel}. Quais categorias tiveram os maiores gastos? Houve gastos atípicos? Como o mês se compara à média dos anteriores? Dê 2 ações concretas para o próximo mês.\n\n${dados}`,
+      projecao:`Com base no histórico completo disponível, faça uma análise e projeções para os próximos 3 meses. Projete: receitas esperadas, gastos por categoria com base na média histórica, progresso nas metas de poupança, e saldo final projetado. Identifique riscos financeiros e oportunidades de melhora.\n\n${dados}`,
+      metas:`Analise o progresso das metas de poupança. Dê uma projeção realista de quando serão atingidas com base no histórico. Avalie se os aportes mensais são suficientes e sugira como acelerar o progresso.\n\n${dados}`,
+      cortes:`Identifique onde é possível cortar gastos com base no histórico. Priorize os cortes por impacto financeiro e facilidade de implementação. Seja específico com valores e categorias.\n\n${dados}`,
     };
-    const result=await callClaude(system, prompts[tipo]||prompts.completa);
+    const result=await callClaude(system, prompts[tipo]||prompts.ano);
     el.className='ai-result';
     el.innerHTML=result.replace(/\n/g,'<br>');
   }catch(e){
