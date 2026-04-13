@@ -47,6 +47,7 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .ntab.active.t-analise{background:var(--adim);color:var(--amber);}
 .ntab.active.t-agenda{background:rgba(45,212,191,.1);color:var(--teal);}
 .ntab.active.t-assinaturas{background:rgba(167,139,250,.1);color:#a78bfa;}
+.ntab.active.t-orcamento{background:rgba(251,191,36,.1);color:var(--amber);}
 .nav-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 .icon-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .icon-btn:hover{border-color:var(--border2);color:var(--text);}
@@ -289,6 +290,23 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .chart-toggle:hover{color:var(--text2);}
 .chart-toggle.active{background:var(--bdim);border-color:var(--bb);color:var(--blue);}
 
+/* ORCAMENTO */
+.orc-row{display:grid;grid-template-columns:1fr 80px 80px 100px 36px;gap:8px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--border);font-size:13px;}
+.orc-row:last-child{border-bottom:none;}
+.orc-row-hdr{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);font-weight:600;padding:6px 6px 4px;}
+.orc-cat{color:var(--text);display:flex;align-items:center;gap:7px;}
+.orc-media{color:var(--text3);font-size:12px;font-variant-numeric:tabular-nums;text-align:right;}
+.orc-limit{font-variant-numeric:tabular-nums;}
+.orc-limit input{width:100%;padding:4px 7px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:12px;text-align:right;}
+.orc-limit input:focus{outline:none;border-color:var(--amber);}
+.orc-bar-wrap{grid-column:1/-1;padding:0 6px 8px;}
+.orc-bar-bg{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.orc-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.orc-especifico{font-size:10px;color:var(--amber);margin-top:1px;}
+@media(max-width:600px){
+  .orc-row{grid-template-columns:1fr 70px 90px 28px;}
+}
+
 /* MISC */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -434,6 +452,7 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <button class="ntab t-extrato" data-page="extrato">Extrato</button>
       <button class="ntab t-agenda" data-page="agenda">Agenda</button>
       <button class="ntab t-assinaturas" data-page="assinaturas">Assinaturas</button>
+      <button class="ntab t-orcamento" data-page="orcamento">Orçamento</button>
       <button class="ntab t-analise" data-page="analise">Assistente IA</button>
     </div>
   </div>
@@ -649,6 +668,42 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
       <div class="empty">Nenhuma assinatura cadastrada</div>
     </div>
     <div id="assinaturasSummary"></div>
+
+  </div>
+</div>
+
+<!-- PAGE: ORÇAMENTO -->
+<!-- PAGE: ORÇAMENTO -->
+<div class="page" id="page-orcamento">
+  <div style="padding-top:.5rem;">
+
+    <!-- Alertas -->
+    <div id="orcAlerts"></div>
+
+    <!-- Mês de visualização -->
+    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <span>Progresso do mês</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select class="fi" id="orcMesRef" onchange="renderOrcamento()" style="padding:3px 8px;font-size:12px;width:auto;"></select>
+      </div>
+    </div>
+
+    <!-- Progresso -->
+    <div id="orcProgress"></div>
+
+    <!-- Configurar limites -->
+    <div class="sec" style="margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <span>Configurar limites</span>
+      <button class="btn btn-neu" style="padding:3px 10px;font-size:11px;" onclick="renderOrcConfig()">↺ Recalcular médias</button>
+    </div>
+    <div class="card" id="orcConfig">
+      <div class="empty">Carregando...</div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text3);margin-top:12px;line-height:1.7;">
+      💡 A média é calculada com os últimos 3 meses com dados em cada categoria.
+      O limite padrão se aplica a todos os meses — use "Exceção" para definir um valor diferente em um mês específico.
+    </div>
 
   </div>
 </div>
@@ -1021,6 +1076,7 @@ let STATE = {
   categorias: [],
   lancamentos: [],
   agenda: [],
+  orcamento: [], // [{categoria, limite_padrao, limites_especificos:{}}]
 };
 let privOn=false, chartInst=null, curMonth='', curYear=new Date().getFullYear(), curRT='hoje', extPage=1, pendingDelId=null, lancTipo='saida', metaNome='', metaAcao='', newCatColor='', chatHistory=[], meSelectedColor='', showArchived=false, chartView='hist';
 
@@ -1126,6 +1182,14 @@ async function syncData(){
         calendar_event_id: String(a.calendar_event_id||''),
         fluxo:       String(a.fluxo||'saida'),
         quinto_util: String(a.quinto_util||'nao'),
+      }));
+    }
+    // Orçamento
+    if(d.orcamento && d.orcamento.length){
+      STATE.orcamento = d.orcamento.map(o=>({
+        categoria: String(o.categoria||''),
+        limite_padrao: parseFloat(o.limite_padrao)||0,
+        limites_especificos: (() => { try{ return JSON.parse(o.limites_especificos||'{}'); }catch(e){ return {}; } })(),
       }));
     }
     saveLocal();
@@ -1346,6 +1410,29 @@ function renderAssinaturas(){
 }
 
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// ORÇAMENTO (ver funções completas abaixo)
+// ═══════════════════════════════════════
+
+
+
+
+
+
+
+
+
+// Projection: estimated spending for future months based on orcamento limits
+function sumOrcProjecaoMonth(m){
+  const mesAtual = today().slice(0,7);
+  if(m <= mesAtual) return 0;
+  return STATE.categorias.filter(c=>c.tipo==='despesa').reduce((s,c)=>{
+    const l = getLimite(c.nome, m);
+    return s + l;
+  }, 0);
+}
+
+// ═══════════════════════════════════════
 // RENDER ALL
 // ═══════════════════════════════════════
 function renderAll(){
@@ -1361,6 +1448,7 @@ function renderAll(){
   updateExtFilters();
   renderAgenda();
   renderAssinaturas();
+  renderOrcAlertsDashboard();
 }
 
 // ═══════════════════════════════════════
@@ -1545,7 +1633,11 @@ function renderChart(){
   const incs    = months.map(m=>sumIn(m));
   const exps    = months.map(m=>sumOut(m));
   const metas   = months.map(m=>sumMeta(m));
-  const progExp = months.map(m=>sumAgendaExpenseMonth(m));
+  const progExp = months.map(m=>{
+    const agenda = sumAgendaExpenseMonth(m);
+    const orc = sumOrcamentoProjected(m);
+    return agenda + orc;
+  });
   const progInc = months.map(m=>sumAgendaIncomeMonth(m));
   const hasMeta    = metas.some(v=>v>0);
   const hasProgExp = progExp.some(v=>v>0);
@@ -2952,6 +3044,300 @@ function pushBg(...args){
   push(...args).catch(e => console.warn('Background sync error:', e));
 }
 
+
+// ═══════════════════════════════════════
+// ORÇAMENTO
+// ═══════════════════════════════════════
+
+// Calcula média dos últimos N meses com dados para uma categoria
+function mediaCategoria(cat, nMeses=3){
+  const todayMes = today().slice(0,7);
+  // Pega todos os meses passados com dados para esta categoria
+  const mesesComDados = [...new Set(STATE.lancamentos
+    .filter(l => l.categoria===cat && l.tipo==='saida' && !isTransfer(l) && l.mes < todayMes)
+    .map(l => l.mes)
+  )].sort().slice(-nMeses);
+  if(!mesesComDados.length) return null;
+  const total = mesesComDados.reduce((s,m) => s + sumOut(m, cat), 0);
+  return Math.round(total / mesesComDados.length * 100) / 100;
+}
+
+function sumOut(m, cat){
+  return STATE.lancamentos
+    .filter(l => l.mes===m && l.tipo==='saida' && !isTransfer(l) && (!cat || l.categoria===cat))
+    .reduce((s,l) => s + l.valor, 0);
+}
+
+// Retorna o limite efetivo para uma categoria num mês específico
+function getLimite(cat, mes){
+  const orc = STATE.orcamento.find ? STATE.orcamento.find(o=>o.categoria===cat) :
+    (Array.isArray(STATE.orcamento) ? STATE.orcamento.find(o=>o.categoria===cat) : null);
+  if(!orc) return null;
+  // Check for month exception
+  if(orc.limites_especificos && orc.limites_especificos[mes] !== undefined){
+    return orc.limites_especificos[mes];
+  }
+  return orc.limite_padrao || null;
+}
+
+function setLimite(cat, valor, mes){
+  if(!Array.isArray(STATE.orcamento)) STATE.orcamento = [];
+  let orc = STATE.orcamento.find(o=>o.categoria===cat);
+  if(!orc){
+    orc = {categoria:cat, limite_padrao:null, limites_especificos:{}};
+    STATE.orcamento.push(orc);
+  }
+  if(mes){
+    if(!orc.limites_especificos) orc.limites_especificos = {};
+    orc.limites_especificos[mes] = valor;
+  } else {
+    orc.limite_padrao = valor;
+  }
+  localStorage.setItem('df_orcamento', JSON.stringify(STATE.orcamento));
+}
+
+function loadOrcamento(){
+  try{
+    const saved = localStorage.getItem('df_orcamento');
+    if(saved) STATE.orcamento = JSON.parse(saved);
+    if(!Array.isArray(STATE.orcamento)) STATE.orcamento = [];
+  }catch(e){ STATE.orcamento = []; }
+}
+
+// Populate month selector
+function populateOrcMesRef(){
+  const sel = document.getElementById('orcMesRef');
+  if(!sel) return;
+  const mesAtual = today().slice(0,7);
+  // Show current month + next 6 months
+  const options = [];
+  for(let i=0; i<7; i++){
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + i);
+    const m = dsFromDate(d).slice(0,7);
+    options.push(`<option value="${m}"${m===mesAtual?' selected':''}>${monthLabel(m)}</option>`);
+  }
+  sel.innerHTML = options.join('');
+}
+
+function resetOrcExcecao(){
+  const mes = document.getElementById('orcMesRef')?.value;
+  if(!mes) return;
+  const mesAtual = today().slice(0,7);
+  if(mes === mesAtual){ alert('Não há exceção para o mês atual.'); return; }
+  STATE.orcamento.forEach(o=>{
+    if(o.limites_especificos) delete o.limites_especificos[mes];
+  });
+  localStorage.setItem('df_orcamento', JSON.stringify(STATE.orcamento));
+  renderOrcamento();
+}
+
+function renderOrcConfig(){ renderOrcamento(); }
+
+function renderOrcamento(){
+  populateOrcMesRef();
+  const mes = document.getElementById('orcMesRef')?.value || today().slice(0,7);
+  const mesAtual = today().slice(0,7);
+  const isFuture = mes > mesAtual;
+  const isCurrent = mes === mesAtual;
+
+  // Get all expense categories that appear in data or have a limit set
+  const catsFromData = [...new Set(STATE.lancamentos
+    .filter(l=>l.tipo==='saida'&&!isTransfer(l)).map(l=>l.categoria))];
+  const catsFromLimites = STATE.orcamento.map(o=>o.categoria);
+  const allCats = [...new Set([...catsFromData, ...catsFromLimites])].sort();
+
+  // --- PROGRESS SECTION ---
+  const progressEl = document.getElementById('orcProgress');
+  const gastoMes = allCats.map(cat=>({
+    cat, gasto: sumOut(mes, cat), limite: getLimite(cat, mes)
+  })).filter(x=>x.gasto>0||x.limite);
+
+  if(progressEl){
+    if(!gastoMes.length){
+      progressEl.innerHTML = `<div class="empty" style="padding:1rem 0;">Nenhum dado ou limite configurado para ${monthLabel(mes)}.</div>`;
+    } else {
+      const rows = gastoMes.map(({cat, gasto, limite})=>{
+        const color = getCatColor(cat);
+        if(!limite){
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span class="cdot" style="background:${color}"></span>
+            <span style="flex:1;font-size:13px;color:var(--text2);">${cat}</span>
+            <span style="font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums;">${BRL(gasto)}</span>
+            <span style="font-size:10px;color:var(--text3);padding:2px 7px;background:var(--surface2);border-radius:8px;">sem limite</span>
+          </div>`;
+        }
+        const pct = Math.min(100, Math.round(gasto/limite*100));
+        const barColor = pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
+        const statusLabel = pct>=100?'⚠ Acima':'';
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
+            <span class="cdot" style="background:${color}"></span>
+            <span style="flex:1;font-size:13px;color:var(--text);">${cat}</span>
+            <span style="font-size:12px;font-variant-numeric:tabular-nums;font-weight:500;color:${barColor};" class="sv">${BRL(gasto)}</span>
+            <span style="font-size:11px;color:var(--text3);">/ ${BRL(limite)}</span>
+            ${statusLabel?`<span style="font-size:10px;color:var(--red);font-weight:600;">${statusLabel}</span>`:''}
+          </div>
+          <div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;">
+            <span style="font-size:10px;color:var(--text3);">${pct}% do limite</span>
+            ${limite-gasto>=0
+              ? `<span style="font-size:10px;color:var(--text3);">Restam ${BRL(limite-gasto)}</span>`
+              : `<span style="font-size:10px;color:var(--red);">Excedeu ${BRL(gasto-limite)}</span>`}
+          </div>
+        </div>`;
+      }).join('');
+      progressEl.innerHTML = `<div class="card">${rows}</div>`;
+    }
+  }
+
+  // --- ALERTS ---
+  renderOrcAlerts(mesAtual);
+
+  // --- CONFIG SECTION ---
+  const configEl = document.getElementById('orcConfig');
+  if(!configEl) return;
+  const hasExcecao = STATE.orcamento.some(o=>o.limites_especificos&&o.limites_especificos[mes]!==undefined);
+  const excLabel = mes!==mesAtual ? `(${isFuture?'mês futuro':'mês passado'} — ${hasExcecao?'com exceção':'usando padrão'})` : '(mês atual)';
+
+  configEl.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">
+      ${mes!==mesAtual?`Editando limites para <strong style="color:var(--text)">${monthLabel(mes)}</strong> ${excLabel}. Valores diferentes do padrão ficam salvos como exceção para este mês.`
+      :`Limites padrão — aplicados a todos os meses sem exceção específica.`}
+    </div>
+    ${allCats.map(cat=>{
+      const media = mediaCategoria(cat);
+      const limPadrao = STATE.orcamento.find(o=>o.categoria===cat)?.limite_padrao || null;
+      const limMes = getLimite(cat, mes);
+      const isExcecao = mes!==mesAtual && STATE.orcamento.find(o=>o.categoria===cat)?.limites_especificos?.[mes]!==undefined;
+      const mediaStr = media!==null ? BRL(media).replace('R$ ','') : null;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+        <span class="cdot" style="background:${getCatColor(cat)}"></span>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:13px;color:var(--text);">${cat}</div>
+          <div style="font-size:11px;color:var(--text3);">
+            ${media!==null ? `Média 3 meses: ${BRL(media)}` : '<span style="color:var(--amber)">Sem dados suficientes</span>'}
+            ${isExcecao?` · <span style="color:var(--amber)">Exceção definida</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${media!==null&&!limMes?`<button class="tbtn" style="font-size:10px;padding:2px 8px;" onclick="usarMedia('${cat.replace(/'/g,"\'")}','${mes}',${media})">Usar média</button>`:''}
+          <div style="position:relative;">
+            <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text3);pointer-events:none;">R$</span>
+            <input class="fi" type="number" step="0.01" min="0"
+              placeholder="Sem limite"
+              value="${limMes||''}"
+              style="width:110px;padding:5px 8px 5px 28px;font-size:12px;"
+              onchange="salvarLimite('${cat.replace(/'/g,"\'")}','${mes}',this.value)"
+              oninput="salvarLimite('${cat.replace(/'/g,"\'")}','${mes}',this.value)"
+            />
+          </div>
+          ${limMes&&mes!==mesAtual?`<button class="tbtn del" style="font-size:10px;padding:2px 6px;" onclick="limparLimiteMes('${cat.replace(/'/g,"\'")}','${mes}')">✕</button>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function usarMedia(cat, mes, media){
+  setLimite(cat, media, mes===today().slice(0,7)?null:mes);
+  renderOrcamento();
+  renderChart();
+}
+
+function salvarLimite(cat, mes, val){
+  const v = parseFloat(val)||null;
+  const mesAtual = today().slice(0,7);
+  setLimite(cat, v, mes===mesAtual?null:mes);
+  // Save to Sheets
+  const orc = STATE.orcamento.find(o=>o.categoria===cat);
+  if(orc) pushBg('saveOrcamento',{
+    categoria:cat,
+    limite_padrao:String(orc.limite_padrao||0),
+    limites_especificos:JSON.stringify(orc.limites_especificos||{}),
+    ultima_atualizacao:today(),
+  });
+  renderChart();
+  renderOrcAlertsDashboard();
+}
+
+function limparLimiteMes(cat, mes){
+  const orc = STATE.orcamento.find(o=>o.categoria===cat);
+  if(orc&&orc.limites_especificos) delete orc.limites_especificos[mes];
+  localStorage.setItem('df_orcamento', JSON.stringify(STATE.orcamento));
+  renderOrcamento();
+  renderChart();
+}
+
+function renderOrcAlerts(mes){
+  const el = document.getElementById('orcAlerts');
+  if(!el) return;
+  const alertas = STATE.categorias
+    .filter(c=>c.tipo==='despesa')
+    .map(c=>{
+      const limite = getLimite(c.nome, mes);
+      if(!limite) return null;
+      const gasto = sumOut(mes, c.nome);
+      const pct = gasto/limite*100;
+      if(pct<80) return null;
+      return {cat:c.nome, gasto, limite, pct, color:getCatColor(c.nome)};
+    }).filter(Boolean);
+
+  if(!alertas.length){ el.innerHTML=''; return; }
+  el.innerHTML = `<div style="background:var(--rdim);border:1px solid var(--rb);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:600;color:var(--amber);margin-bottom:8px;">⚠ Limites de orçamento</div>
+    ${alertas.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">
+      <span class="cdot" style="background:${a.color}"></span>
+      <span style="flex:1;color:var(--text2);">${a.cat}</span>
+      <span style="color:${a.pct>=100?'var(--red)':'var(--amber)'};">${Math.round(a.pct)}% — ${BRL(a.gasto)} / ${BRL(a.limite)}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+// Calcula total de orçamento estimado para um mês (limites definidos)
+function sumOrcamentoMonth(m){
+  if(!Array.isArray(STATE.orcamento)||!STATE.orcamento.length) return 0;
+  return STATE.orcamento.reduce((s,o)=>{
+    const lim = getLimite(o.categoria, m);
+    return s + (lim||0);
+  }, 0);
+}
+
+// Orçamento usado no gráfico: apenas para meses futuros onde não há lançamentos
+function sumOrcamentoProjected(m){
+  const todayMes = today().slice(0,7);
+  if(m <= todayMes) return 0; // only future months
+  const realExp = sumOut(m);
+  const agendaExp = sumAgendaExpenseMonth(m);
+  const orcTotal = sumOrcamentoMonth(m);
+  // Return what's not already covered by agenda
+  return Math.max(0, orcTotal - agendaExp - realExp);
+}
+
+function renderOrcAlertsDashboard(){
+  const mes = today().slice(0,7);
+  const alertas = STATE.categorias.filter(c=>c.tipo==='despesa').map(c=>{
+    const limite = getLimite(c.nome, mes);
+    if(!limite) return null;
+    const gasto = sumOut(mes, c.nome);
+    const pct = gasto/limite*100;
+    return pct>=80 ? {cat:c.nome, pct} : null;
+  }).filter(Boolean);
+  let el = document.getElementById('orcAlertDash');
+  if(!el){
+    el = document.createElement('div'); el.id='orcAlertDash';
+    const kpiGrid = document.getElementById('kpiGrid');
+    if(kpiGrid) kpiGrid.parentNode.insertBefore(el, kpiGrid.nextSibling);
+  }
+  if(!alertas.length){ el.innerHTML=''; return; }
+  el.innerHTML = `<div style="background:var(--adim);border:1px solid var(--ab);border-radius:var(--r);padding:.9rem 1.2rem;margin-bottom:10px;cursor:pointer;" onclick="switchPage('orcamento')">
+    <span style="font-size:12px;font-weight:600;color:var(--amber);">⚠ ${alertas.length} categoria(s) próxima(s) ou acima do limite de orçamento — clique para ver</span>
+  </div>`;
+}
+
 // ── BOTÃO COM LOADING — evita cliques múltiplos ──
 function btnLoading(btnEl, loading, originalText){
   if(!btnEl) return;
@@ -2981,6 +3367,7 @@ function switchPage(p){
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id==='page-'+p));
   if(p==='agenda') renderAgenda();
   if(p==='assinaturas') renderAssinaturas();
+  if(p==='orcamento') renderOrcamento();
 }
 
 function changeYear(year){
