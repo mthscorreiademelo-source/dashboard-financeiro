@@ -44,10 +44,10 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .ntab:hover{color:var(--text);background:var(--surface2);}
 .ntab.active{background:var(--surface2);color:var(--text);font-weight:500;}
 .ntab.active.t-extrato{background:var(--bdim);color:var(--blue);}
-.ntab.active.t-analise{background:var(--adim);color:var(--amber);}
 .ntab.active.t-agenda{background:rgba(45,212,191,.1);color:var(--teal);}
 .ntab.active.t-assinaturas{background:rgba(167,139,250,.1);color:#a78bfa;}
 .ntab.active.t-orcamento{background:rgba(251,191,36,.1);color:var(--amber);}
+.ntab.active.t-exportar{background:rgba(52,211,153,.1);color:var(--green);}
 .nav-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 .icon-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--rs);border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .icon-btn:hover{border-color:var(--border2);color:var(--text);}
@@ -191,29 +191,6 @@ input,select,button,textarea{font-family:inherit;font-size:14px;}
 .pgbtn:disabled{opacity:.4;cursor:default;}
 
 /* ANALYSIS PAGE */
-.ai-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;margin-bottom:16px;}
-.ai-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
-.ai-panel-hdr h3{font-size:14px;font-weight:600;color:var(--text);}
-.ai-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.ai-result{font-size:13px;color:var(--text2);line-height:1.8;min-height:60px;}
-.ai-result.loading{color:var(--text3);font-style:italic;}
-.ai-result strong{color:var(--text);}
-.ai-result h4{color:var(--amber);font-size:13px;margin:12px 0 4px;}
-.ai-result ul{padding-left:18px;margin:4px 0;}
-.ai-result li{margin:2px 0;}
-.chat-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
-.chat-msgs{height:360px;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:12px;}
-.chat-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.7;}
-.chat-msg.user{align-self:flex-end;background:var(--bdim);border:1px solid var(--bb);color:var(--text);}
-.chat-msg.ai{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);color:var(--text2);}
-.chat-msg.ai strong{color:var(--text);}
-.chat-msg.loading{color:var(--text3);font-style:italic;}
-.chat-input-row{display:flex;gap:8px;padding:.8rem 1rem;border-top:1px solid var(--border);background:var(--surface2);}
-.chat-input{flex:1;padding:8px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;resize:none;}
-.chat-input:focus{outline:none;border-color:var(--blue);}
-.suggested-qs{display:flex;gap:6px;flex-wrap:wrap;padding:.6rem 1rem;border-top:1px solid var(--border);}
-.sq-btn{padding:4px 11px;border-radius:12px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;transition:all .15s;}
-.sq-btn:hover{border-color:var(--bb);color:var(--blue);}
 
 /* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:500;align-items:center;justify-content:center;padding:1rem;}
@@ -401,8 +378,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   .agenda-row-acts{flex-wrap:wrap;gap:4px;}
 
   /* AI */
-  .ai-panel-hdr{flex-direction:column;align-items:flex-start;gap:8px;}
-  .chat-msgs{height:260px;}
 
   /* TWO-COL already handled by existing rule */
   .sec{flex-wrap:wrap;gap:4px;}
@@ -428,6 +403,20 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 .ext-card-date{font-size:11px;color:var(--text3);}
 .ext-card-cat{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface);color:var(--text3);}
 .ext-card-acts{display:flex;gap:4px;}
+/* PRINT / PDF EXPORT */
+@media print{
+  body{background:#fff;color:#111;font-size:12px;}
+  .nav,.page:not(.print-active),.overlay{display:none!important;}
+  .page.print-active{display:block!important;max-width:100%;padding:0;}
+  #printReport{display:block!important;}
+  .no-print{display:none!important;}
+  h1{font-size:18px;margin-bottom:4px;}
+  h2{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;margin:14px 0 6px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{background:#eee;text-align:left;padding:4px 6px;border:1px solid #ccc;}
+  td{padding:4px 6px;border:1px solid #eee;}
+  .section{margin-bottom:16px;}
+}
 </style>
 </head>
 <body>
@@ -450,10 +439,9 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="nav-bottom">
       <button class="ntab active" data-page="dashboard">Visão Geral</button>
       <button class="ntab t-extrato" data-page="extrato">Extrato</button>
-      <button class="ntab t-agenda" data-page="agenda">Agenda</button>
       <button class="ntab t-assinaturas" data-page="assinaturas">Assinaturas</button>
       <button class="ntab t-orcamento" data-page="orcamento">Orçamento</button>
-      <button class="ntab t-analise" data-page="analise">Assistente IA</button>
+      <button class="ntab t-exportar" data-page="exportar">Exportar</button>
     </div>
   </div>
 </nav>
@@ -472,7 +460,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
     <div class="setup-row">
       <button class="btn btn-blue" onclick="saveConfig()">Salvar e conectar</button>
     </div>
-    <p style="margin-top:8px;font-size:11px;color:var(--text3);">⚠ A chave da API Claude fica configurada no Apps Script — não precisa colocar aqui.</p>
   </div>
 
   <!-- SALDO HERO -->
@@ -601,51 +588,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 </div>
 
 <!-- PAGE: AGENDA -->
-<div class="page" id="page-agenda">
-  <div style="padding-top:.5rem;">
-
-    <!-- Alerta de vencimentos hoje (renderizado dinamicamente) -->
-    <div id="agendaAlertHoje"></div>
-
-    <!-- Recorrentes mensais -->
-    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-      <span>Recorrentes mensais</span>
-      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-        <select class="fi" id="sortRecorrentes" onchange="renderAgenda()" style="padding:3px 8px;font-size:11px;width:auto;">
-          <option value="data_asc">Próximo vencimento</option>
-          <option value="valor_desc">Maior valor</option>
-          <option value="valor_asc">Menor valor</option>
-          <option value="nome_asc">A → Z</option>
-        </select>
-        <button class="btn btn-blue" style="padding:3px 10px;font-size:11px;" onclick="openAgendaModal('recorrente');setAgTipo('saida')">− Despesa</button>
-        <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="openAgendaModal('recorrente');setAgTipo('entrada')">+ Receita</button>
-      </div>
-    </div>
-    <div class="card" id="agendaRecorrentes">
-      <div class="empty">Nenhum recorrente cadastrado</div>
-    </div>
-
-    <!-- Agendados únicos -->
-    <div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-      <span>Agendados únicos</span>
-      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-        <select class="fi" id="sortUnicos" onchange="renderAgenda()" style="padding:3px 8px;font-size:11px;width:auto;">
-          <option value="data_asc">Data mais próxima</option>
-          <option value="valor_desc">Maior valor</option>
-          <option value="valor_asc">Menor valor</option>
-          <option value="nome_asc">A → Z</option>
-        </select>
-        <button class="btn btn-blue" style="padding:3px 10px;font-size:11px;" onclick="openAgendaModal('unico');setAgTipo('saida')">− Despesa</button>
-        <button class="btn" style="padding:3px 10px;font-size:11px;background:var(--gdim);border-color:var(--gb);color:var(--green);" onclick="openAgendaModal('unico');setAgTipo('entrada')">+ Receita</button>
-      </div>
-    </div>
-    <div class="card" id="agendaUnicos">
-      <div class="empty">Nenhum agendamento único cadastrado</div>
-    </div>
-
-  </div>
-</div>
-
 <!-- PAGE: ASSINATURAS -->
 <div class="page" id="page-assinaturas">
   <div style="padding-top:.5rem;">
@@ -711,50 +653,59 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 </div>
 
-<!-- PAGE: ANÁLISE IA -->
-<div class="page" id="page-analise">
+<!-- PAGE: EXPORTAR DADOS -->
+<div class="page" id="page-exportar">
   <div style="padding-top:.5rem;">
+    <div class="sec">Exportar dados para análise com IA</div>
+    <div class="card" style="margin-bottom:14px;">
+      <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px;">
+        Configure o período e as informações desejadas, depois clique em <strong style="color:var(--text);">Exportar PDF</strong>.
+        O arquivo baixado pode ser anexado em qualquer IA (ChatGPT, Gemini, Claude, etc.) para análise.
+      </p>
 
-    <!-- Análise geral -->
-    <div class="ai-panel">
-      <div class="ai-panel-hdr">
-        <h3>Análise financeira completa</h3>
-        <div class="ai-actions">
-          <button class="btn btn-blue" onclick="gerarAnalise('ano')">✦ Análise deste ano</button>
-          <button class="btn btn-neu" onclick="gerarAnalise('trimestre')">📅 Último trimestre</button>
-          <button class="btn btn-neu" onclick="gerarAnalise('mes')">📆 Último mês</button>
-          <button class="btn btn-neu" onclick="gerarAnalise('projecao')">🔮 Análise e Projeções</button>
-          <button class="btn btn-neu" onclick="gerarAnalise('metas')">📊 Foco nas metas</button>
-          <button class="btn btn-neu" onclick="gerarAnalise('cortes')">✂ Onde cortar</button>
+      <div class="sec" style="margin-top:0;">Período</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="mtab active" id="expBtn-mes"       onclick="setExpPeriod('mes')">Mês atual</button>
+        <button class="mtab"        id="expBtn-trimestre" onclick="setExpPeriod('trimestre')">Último trimestre</button>
+        <button class="mtab"        id="expBtn-ano"       onclick="setExpPeriod('ano')">Ano atual</button>
+        <button class="mtab"        id="expBtn-todos"     onclick="setExpPeriod('todos')">Todo o histórico</button>
+        <button class="mtab"        id="expBtn-custom"    onclick="setExpPeriod('custom')">Personalizado</button>
+      </div>
+      <div id="expCustomRange" style="display:none;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <label style="font-size:12px;color:var(--text2);">De:</label>
+          <input class="fi" type="month" id="expDe" style="width:140px;padding:5px 8px;" />
+          <label style="font-size:12px;color:var(--text2);">Até:</label>
+          <input class="fi" type="month" id="expAte" style="width:140px;padding:5px 8px;" />
         </div>
       </div>
-      <div class="ai-result" id="aiResult">
-        <span style="color:var(--text3);">Escolha um tipo de análise acima para o Claude analisar seus dados financeiros e gerar insights personalizados.</span>
+
+      <div class="sec" style="margin-top:1rem;">Informações a incluir</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkResumo"      checked style="accent-color:var(--blue);width:15px;height:15px;"> Resumo geral</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkMensal"      checked style="accent-color:var(--blue);width:15px;height:15px;"> Breakdown mensal</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkCategorias"  checked style="accent-color:var(--blue);width:15px;height:15px;"> Gastos por categoria</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkLancamentos" checked style="accent-color:var(--blue);width:15px;height:15px;"> Lista de lançamentos</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkMetas"       checked style="accent-color:var(--blue);width:15px;height:15px;"> Caixinhas e metas</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkAgenda"      checked style="accent-color:var(--blue);width:15px;height:15px;"> Agenda financeira</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkOrcamento"   checked style="accent-color:var(--blue);width:15px;height:15px;"> Orçamento por categoria</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="expChkObservacoes" checked style="accent-color:var(--blue);width:15px;height:15px;"> Observações contextuais</label>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-blue" style="padding:9px 24px;font-size:14px;font-weight:600;" onclick="exportarPDF()">⬇ Exportar PDF</button>
+        <span style="font-size:11px;color:var(--text3);">Gera relatório completo em PDF para análise com IA.</span>
       </div>
     </div>
 
-    <!-- Chat -->
-    <div class="sec">Pergunte sobre suas finanças</div>
-    <div class="chat-wrap">
-      <div class="chat-msgs" id="chatMsgs">
-        <div class="chat-msg ai">Olá! Sou o Claude. Conecte seus dados financeiros e me pergunte qualquer coisa — gastos, metas, projeções, comparações entre meses, dicas de economia. Estou aqui para ajudar! 👋</div>
-      </div>
-      <div class="suggested-qs">
-        <button class="sq-btn" onclick="sendSuggested('Qual meu maior gasto do mês atual?')">Maior gasto do mês</button>
-        <button class="sq-btn" onclick="sendSuggested('Como estão minhas metas de poupança?')">Status das metas</button>
-        <button class="sq-btn" onclick="sendSuggested('Quanto gastei com iFood no total?')">Total iFood</button>
-        <button class="sq-btn" onclick="sendSuggested('Quando vou atingir minha reserva de emergência?')">Previsão reserva</button>
-        <button class="sq-btn" onclick="sendSuggested('Quais assinaturas posso cancelar?')">Assinaturas</button>
-      </div>
-      <div class="chat-input-row">
-        <textarea class="chat-input" id="chatInput" rows="1" placeholder="Digite sua pergunta..." onkeydown="chatKeydown(event)"></textarea>
-        <button class="btn btn-blue" onclick="sendChat()">Enviar</button>
-      </div>
+    <div class="card" style="background:var(--bdim);border-color:var(--bb);">
+      <p style="font-size:12px;color:var(--text2);line-height:1.8;">
+        💡 <strong style="color:var(--text);">Como usar:</strong> Após baixar o PDF, abra seu assistente de IA preferido, anexe o arquivo e peça análises como:
+        <em>"Analise meus gastos e me diga onde posso economizar"</em> ou <em>"Compare meus meses e identifique tendências preocupantes"</em>.
+      </p>
     </div>
-
   </div>
 </div>
-
 <!-- MODALS -->
 
 <!-- Lançamento -->
@@ -906,59 +857,6 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
 </div>
 
 <!-- Modal: agenda (adicionar/editar) -->
-<div class="overlay" id="mAgenda">
-  <div class="modal">
-    <div class="modal-hdr">
-      <span class="modal-title" id="mAgendaTit">Novo item</span>
-      <button class="modal-x" onclick="closeModal('mAgenda')">✕</button>
-    </div>
-    <!-- Tipo: despesa ou receita -->
-    <div class="type-row" id="agTipoRow">
-      <button class="type-btn out active" id="agTipoDesp" onclick="setAgTipo('saida')">− Despesa</button>
-      <button class="type-btn" id="agTipoRec" onclick="setAgTipo('entrada')" style="background:var(--gdim);border-color:var(--gb);color:var(--green);opacity:.4;">+ Receita</button>
-    </div>
-    <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="agNome" placeholder="Ex: Hapvida, Salário, Freelance..."/></div>
-    <div class="fg"><label class="fl">Valor estimado (R$)</label><input class="fi currency-input" type="text" id="agValor" placeholder="R$ 0,00" inputmode="decimal"/></div>
-    <div class="fg"><label class="fl">Categoria</label><select class="fi" id="agCat"></select></div>
-    <div class="fg"><label class="fl">Descrição (opcional)</label><input class="fi" type="text" id="agDesc" placeholder="Observações..."/></div>
-    <div class="fg" id="agPeriodGrp" style="display:none;">
-      <label class="fl">Periodicidade</label>
-      <select class="fi" id="agPeriod" onchange="onPeriodChange(this.value)">
-        <option value="mensal">Mensal</option>
-        <option value="trimestral">Trimestral (a cada 3 meses)</option>
-        <option value="semestral">Semestral (a cada 6 meses)</option>
-        <option value="anual">Anual</option>
-        <option value="parcelado_12x">Parcelado em 12x</option>
-      </select>
-    </div>
-    <div class="fg" id="agParcelaGrp" style="display:none;">
-      <label class="fl">Valor da parcela mensal (R$)</label>
-      <input class="fi currency-input" type="text" id="agParcela" placeholder="R$ 0,00" inputmode="decimal"/>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">O valor principal é o total cobrado. A parcela é o custo mensal equivalente.</div>
-    </div>
-    <div class="fg" id="agDiaGrp">
-      <label class="fl">Dia do vencimento (1–31)</label>
-      <select class="fi" id="agDiaSelect" onchange="onDiaSelectChange(this.value)">
-        <option value="dia_fixo">Dia fixo do mês</option>
-        <option value="quinto_util">5º dia útil do mês (CLT)</option>
-      </select>
-      <input class="fi" type="number" id="agDia" min="1" max="31" placeholder="Ex: 10" style="margin-top:6px;"/>
-    </div>
-    <div class="fg" id="agDataGrp" style="display:none;">
-      <label class="fl">Data do pagamento</label>
-      <input class="fi" type="date" id="agData"/>
-    </div>
-    <input type="hidden" id="agId"/>
-    <input type="hidden" id="agTipoHidden"/>
-    <input type="hidden" id="agFluxo" value="saida"/>
-    <div class="modal-acts">
-      <button class="btn btn-blue" style="flex:1" onclick="submitAgenda()">Salvar</button>
-      <button class="btn btn-neu" onclick="closeModal('mAgenda')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: pagar/receber item da agenda -->
 <div class="overlay" id="mPagar">
   <div class="modal">
     <div class="modal-hdr">
@@ -982,23 +880,223 @@ body.prv .saldo-valor::after{content:'• • • •';position:absolute;left:50
   </div>
 </div>
 
-<!-- Modal: adiar -->
-<div class="overlay" id="mAdiar">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-hdr">
-      <span class="modal-title">Adiar pagamento</span>
-      <button class="modal-x" onclick="closeModal('mAdiar')">✕</button>
-    </div>
-    <div class="fg"><label class="fl">Nova data de vencimento</label><input class="fi" type="date" id="adData"/></div>
-    <input type="hidden" id="adId"/>
-    <div class="modal-acts">
-      <button class="btn" style="flex:1;background:var(--adim);border-color:var(--ab);color:var(--amber);" onclick="submitAdiar()">Adiar</button>
-      <button class="btn btn-neu" onclick="closeModal('mAdiar')">Cancelar</button>
-    </div>
-  </div>
-</div>
 
 <script>
+// ═══════════════════════════════════════
+// EXPORTAR PDF
+// ═══════════════════════════════════════
+let expPeriodo = 'mes';
+
+function setExpPeriod(p){
+  expPeriodo = p;
+  document.querySelectorAll('[id^="expBtn-"]').forEach(b=>{
+    b.classList.toggle('active', b.id === 'expBtn-'+p);
+  });
+  document.getElementById('expCustomRange').style.display = p==='custom'?'block':'none';
+}
+
+function getExpMonths(){
+  const todayMes = today().slice(0,7);
+  const [yr, mo] = todayMes.split('-').map(Number);
+  const allM = availableYears().slice().reverse().flatMap(y=>monthsForYear(y));
+
+  if(expPeriodo === 'mes')    return [todayMes];
+  if(expPeriodo === 'trimestre'){
+    const ms=[];
+    for(let i=0;i<3;i++){
+      let mm=mo-i,yy=yr;
+      if(mm<=0){mm+=12;yy--;}
+      ms.unshift(`${yy}-${String(mm).padStart(2,'0')}`);
+    }
+    return ms;
+  }
+  if(expPeriodo === 'ano')    return monthsForYear(yr).filter(m=>m<=todayMes);
+  if(expPeriodo === 'todos')  return allM.filter(m=>m<=todayMes);
+  if(expPeriodo === 'custom'){
+    const de  = document.getElementById('expDe').value;
+    const ate = document.getElementById('expAte').value || todayMes;
+    return allM.filter(m=>m>=de&&m<=ate);
+  }
+  return [todayMes];
+}
+
+function exportarPDF(){
+  const months = getExpMonths();
+  if(!months.length){ alert('Nenhum mês selecionado'); return; }
+
+  const chk = id => document.getElementById(id)?.checked;
+  const BRLp = v => 'R$ ' + (parseFloat(v)||0).toFixed(2).replace('.',',').replace(/(\d)(?=(\d{3})+,)/g,'$1.');
+  const lbl  = m => { const p=m.split('-'); const mn={'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'}; return (mn[p[1]]||p[1])+'/'+p[0]; };
+  const SEP  = '─'.repeat(72);
+  const SEP2 = '═'.repeat(72);
+  let sections = [];
+
+  // ── Resumo geral ──
+  if(chk('expChkResumo')){
+    const totalInc  = months.reduce((s,m)=>s+sumIn(m),0);
+    const totalExp  = months.reduce((s,m)=>s+sumOut(m),0);
+    const totalMeta = months.reduce((s,m)=>s+sumMeta(m),0);
+    const saldoPer  = totalInc - totalExp - totalMeta;
+    const periodo   = months.length > 1 ? lbl(months[0])+' até '+lbl(months[months.length-1]) : lbl(months[0]);
+    let t = 'RESUMO GERAL ('+periodo+')\n'+SEP+'\n';
+    t += 'Receitas totais:       '+BRLp(totalInc)+'\n';
+    t += 'Despesas totais:       '+BRLp(totalExp)+'\n';
+    t += 'Aportes em metas:      '+BRLp(totalMeta)+'\n';
+    t += 'Saldo do período:      '+BRLp(saldoPer)+'\n';
+    t += 'Saldo atual em conta:  '+BRLp(STATE.saldo)+'\n';
+    sections.push(t);
+  }
+
+  // ── Breakdown mensal ──
+  if(chk('expChkMensal')){
+    let t = 'BREAKDOWN MENSAL\n'+SEP+'\n';
+    months.forEach(m=>{
+      const inc=sumIn(m), exp=sumOut(m), inv=sumMeta(m);
+      if(inc===0&&exp===0&&inv===0) return;
+      t += lbl(m)+': Receitas '+BRLp(inc)+' | Despesas '+BRLp(exp)+' | Metas '+BRLp(inv)+' | Saldo '+BRLp(inc-exp-inv)+'\n';
+    });
+    sections.push(t);
+  }
+
+  // ── Gastos por categoria ──
+  if(chk('expChkCategorias')){
+    let t = 'GASTOS POR CATEGORIA\n'+SEP+'\n';
+    const catTotals = {};
+    months.forEach(m=>{
+      getCatsForMonth(m).forEach(([nome,data])=>{ catTotals[nome]=(catTotals[nome]||0)+data.total; });
+    });
+    const sorted = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+    const grand  = sorted.reduce((s,[,v])=>s+v,0);
+    sorted.forEach(([nome,total])=>{
+      const pct = grand>0 ? Math.round(total/grand*100) : 0;
+      t += nome.substring(0,38).padEnd(40,' ')+BRLp(total).padStart(14)+'  ('+String(pct).padStart(3)+'%)\n';
+    });
+    t += SEP+'\nTOTAL: '+BRLp(grand)+'\n';
+    sections.push(t);
+  }
+
+  // ── Lista de lançamentos ──
+  if(chk('expChkLancamentos')){
+    const lancs = STATE.lancamentos
+      .filter(l=>months.includes(l.mes||(l.data?l.data.slice(0,7):'')))
+      .sort((a,b)=>a.data.localeCompare(b.data));
+    let t = 'LANÇAMENTOS ('+lancs.length+' registros)\n'+SEP+'\n';
+    t += 'DATA        TIPO      DESCRIÇÃO                          CATEGORIA                VALOR\n';
+    t += SEP+'\n';
+    lancs.forEach(l=>{
+      const sinal = l.tipo==='entrada' ? '+' : '-';
+      t += (l.data||'').padEnd(12)
+        + sinal.padEnd(10)
+        + (l.descricao||'').substring(0,33).padEnd(35)
+        + (l.categoria||'').substring(0,23).padEnd(25)
+        + sinal+BRLp(l.valor)+'\n';
+    });
+    sections.push(t);
+  }
+
+  // ── Caixinhas e metas ──
+  if(chk('expChkMetas')){
+    let t = 'CAIXINHAS E METAS\n'+SEP+'\n';
+    STATE.metas.filter(m=>!m.archived).forEach(m=>{
+      const pct = m.meta>0 ? Math.round(m.saldo/m.meta*100) : 0;
+      t += m.label+': '+BRLp(m.saldo)+' / '+BRLp(m.meta)+' ('+pct+'%)';
+      if(m.meta_mensal>0) t += ' | Aporte mensal: '+BRLp(m.meta_mensal);
+      t += '\n';
+    });
+    sections.push(t);
+  }
+
+  // ── Agenda financeira ──
+  if(chk('expChkAgenda')){
+    const ativos = STATE.agenda.filter(a=>a.status!=='cancelado'&&a.status!=='concluido');
+    let t = 'AGENDA FINANCEIRA ('+ativos.length+' itens ativos)\n'+SEP+'\n';
+    ativos.forEach(a=>{
+      const tipo  = a.tipo==='assinatura'?'Assinatura':a.tipo==='unico'?'Único':'Recorrente';
+      const sinal = (a.fluxo||'saida')==='entrada' ? '+' : '-';
+      t += '['+tipo+'] '+a.nome+' — '+sinal+BRLp(parseFloat(a.valor)||0);
+      if(a.tipo!=='unico') t += ' | Vence dia '+a.dia_vencimento;
+      if(a.categoria) t += ' | '+a.categoria;
+      t += '\n';
+    });
+    const totSaida   = ativos.filter(a=>(a.fluxo||'saida')==='saida').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+    const totEntrada = ativos.filter(a=>a.fluxo==='entrada').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+    t += SEP+'\nSaídas mensais estimadas: '+BRLp(totSaida)+'\nEntradas mensais estimadas: '+BRLp(totEntrada)+'\n';
+    sections.push(t);
+  }
+
+  // ── Orçamento ──
+  if(chk('expChkOrcamento')){
+    const mes = today().slice(0,7);
+    let t = 'ORÇAMENTO — '+lbl(mes)+'\n'+SEP+'\n';
+    STATE.categorias.filter(c=>c.tipo==='despesa').forEach(c=>{
+      const lim = getLimite(c.nome, mes);
+      if(!lim) return;
+      const gasto = sumOut(mes, c.nome);
+      const pct   = Math.round(gasto/lim*100);
+      const flag  = pct>=100 ? '⚠ ESTOUROU' : pct>=80 ? '⚡ Próximo' : '✓ OK';
+      t += c.nome.substring(0,33).padEnd(35,' ')
+        +'Limite: '+BRLp(lim).padStart(12)
+        +' | Gasto: '+BRLp(gasto).padStart(12)
+        +' | '+pct+'% '+flag+'\n';
+    });
+    sections.push(t);
+  }
+
+  // ── Observações contextuais ──
+  if(chk('expChkObservacoes')){
+    const mes    = today().slice(0,7);
+    const inc    = sumIn(mes), exp = sumOut(mes), inv = sumMeta(mes);
+    const saldoM = inc - exp - inv;
+    let t = 'OBSERVAÇÕES CONTEXTUAIS\n'+SEP+'\n';
+    t += 'Data de exportação: '+new Date().toLocaleDateString('pt-BR')+'\n';
+    t += 'Mês atual: '+lbl(mes)+'\n';
+    t += 'Saldo em conta: '+BRLp(STATE.saldo)+'\n';
+    t += 'Resultado do mês atual: '+(saldoM>=0?'+':'')+BRLp(saldoM)+'\n';
+    const pendAgenda = STATE.agenda.filter(a=>{
+      if(a.status==='cancelado'||a.status==='concluido') return false;
+      const prox = getProximaDataItem(a);
+      return prox && prox.slice(0,7)===mes && (!a.ultima_confirmacao||a.ultima_confirmacao.slice(0,7)!==mes);
+    });
+    t += 'Itens pendentes na agenda este mês: '+pendAgenda.length+'\n';
+    if(pendAgenda.length){
+      t += 'Total pendente: '+BRLp(pendAgenda.reduce((s,a)=>s+(parseFloat(a.valor)||0),0))+'\n';
+    }
+    const metasAtencao = STATE.metas.filter(m=>!m.archived&&m.meta>0&&(m.saldo/m.meta)<0.5);
+    if(metasAtencao.length){
+      t += 'Metas com menos de 50% atingido: '+metasAtencao.map(m=>m.label).join(', ')+'\n';
+    }
+    sections.push(t);
+  }
+
+  if(!sections.length){ alert('Selecione ao menos uma informação para incluir.'); return; }
+
+  // ── Gerar PDF via janela de impressão ──
+  const periodo  = months.length > 1 ? lbl(months[0])+' a '+lbl(months[months.length-1]) : lbl(months[0]);
+  const titulo   = 'Relatório Financeiro — '+periodo;
+  const conteudo = sections.join('\n'+SEP2+'\n\n');
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('Permita pop-ups para gerar o PDF.'); return; }
+  win.document.write('<!DOCTYPE html><html><head>'
+    +'<meta charset="UTF-8"><title>'+titulo+'</title>'
+    +'<style>'
+    +'body{font-family:"Courier New",monospace;font-size:11px;color:#111;padding:24px 32px;max-width:960px;margin:0 auto;line-height:1.55;}'
+    +'h1{font-size:15px;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:18px;}'
+    +'.meta{font-size:10px;color:#555;margin-bottom:20px;}'
+    +'pre{white-space:pre-wrap;word-break:break-word;}'
+    +'button{margin-top:16px;padding:8px 22px;font-size:13px;cursor:pointer;background:#1a56db;color:#fff;border:none;border-radius:6px;}'
+    +'@media print{button{display:none;}body{padding:0;}}'
+    +'</style></head><body>'
+    +'<h1>'+titulo+'</h1>'
+    +'<div class="meta">Exportado em '+new Date().toLocaleString('pt-BR')+' · Dashboard Financeiro</div>'
+    +'<pre>'+conteudo.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>'
+    +'<button onclick="window.print()">🖨 Imprimir / Salvar como PDF</button>'
+    +'</body></html>');
+  win.document.close();
+}
+
+
+
 // ═══════════════════════════════════════
 // CONFIG & STATE
 // ═══════════════════════════════════════
@@ -1073,7 +1171,6 @@ const EXT_PAGE_SZ = 50;
 let CFG = {
   url: localStorage.getItem('df_url')||'',
   secret: localStorage.getItem('df_secret')||'',
-  claudeKey: localStorage.getItem('df_claude_key')||'',
 };
 let STATE = {
   saldo: 0,
@@ -1111,7 +1208,6 @@ function showSetup(){
   document.getElementById('setupBanner').style.display='block';
   if(CFG.url) document.getElementById('cfgUrl').value=CFG.url;
   if(CFG.secret) document.getElementById('cfgSecret').value=CFG.secret;
-  if(CFG.claudeKey) document.getElementById('cfgClaudeKey').value='sk-ant-...configurado';
 }
 
 function saveConfig(){
@@ -1308,6 +1404,13 @@ function sumAgendaExpenseMonth(m){
   return getAgendaForMonthByFluxo(m, 'saida').reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
 }
 
+// Sum only PENDING (unpaid) programmed expenses for a month
+function sumAgendaExpenseMonthPendente(m){
+  return getAgendaForMonthByFluxo(m, 'saida')
+    .filter(a => !a.ultima_confirmacao || a.ultima_confirmacao.slice(0,7) !== m)
+    .reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+}
+
 function getAgendaForMonthByFluxo(m, fluxo){
   return getAgendaForMonth(m).filter(a=>(a.fluxo||'saida')===fluxo);
 }
@@ -1453,7 +1556,6 @@ function renderAll(){
   renderGoals();
   renderExtrato();
   updateExtFilters();
-  renderAgenda();
   renderAssinaturas();
   renderOrcamento();
   renderOrcAlertsDashboard();
@@ -1641,11 +1743,7 @@ function renderChart(){
   const incs    = months.map(m=>sumIn(m));
   const exps    = months.map(m=>sumOut(m));
   const metas   = months.map(m=>sumMeta(m));
-  const progExp = months.map(m=>{
-    const agenda = sumAgendaExpenseMonth(m);
-    const orc = sumOrcamentoProjected(m);
-    return agenda + orc;
-  });
+  const progExp = months.map(m => sumOrcamentoProjected(m));
   const progInc = months.map(m=>sumAgendaIncomeMonth(m));
   const hasMeta    = metas.some(v=>v>0);
   const hasProgExp = progExp.some(v=>v>0);
@@ -1747,12 +1845,88 @@ function openChartDrill(m, datasetLabel){
     el.innerHTML = drillAgendaHtml(items, 'entrada');
 
   } else if(datasetLabel === 'Despesa programada'){
-    const items = getAgendaForMonthByFluxo(m,'saida');
-    el.innerHTML = drillAgendaHtml(items, 'saida');
+    el.innerHTML = drillProgDetalhadoHtml(m);
   }
 
   openModal('mChartDrill');
 }
+
+// ═══════════════════════════════════════
+// DRILL: Despesa programada detalhada
+// ═══════════════════════════════════════
+function drillProgDetalhadoHtml(m){
+  const todayMes = today().slice(0,7);
+  const todayStr = today();
+  let html = '';
+  let totalGeral = 0;
+
+  // ── Seção 1: Itens da agenda pendentes (recorrentes e únicos) ──
+  const agendaPendentes = getAgendaForMonthByFluxo(m, 'saida').filter(a => {
+    if(a.ultima_confirmacao && a.ultima_confirmacao.slice(0,7) === m) return false;
+    return true;
+  });
+
+  if(agendaPendentes.length){
+    const totalAgenda = agendaPendentes.reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+    totalGeral += totalAgenda;
+    html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:10px 4px 5px;font-weight:600;">📅 Agenda pendente</div>`;
+    html += agendaPendentes.map(a=>{
+      const proxima = getProximaDataItem(a);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:13px;">
+        <div style="flex:1;">
+          <div style="color:var(--text);">${a.nome}</div>
+          <div style="font-size:11px;color:var(--text3);">${proxima?fmtD(proxima):'—'} · ${a.categoria}</div>
+        </div>
+        <span style="color:#94a3b8;font-weight:600;font-variant-numeric:tabular-nums;" class="sv">− ${BRL(parseFloat(a.valor)||0)}</span>
+        <button class="tbtn" style="font-size:10px;padding:2px 7px;" onclick="closeModal('mChartDrill');openPagar('${a.id}')">Pagar</button>
+      </div>`;
+    }).join('');
+    html += `<div style="display:flex;justify-content:flex-end;padding:6px 4px;font-size:12px;border-bottom:2px solid var(--border2);">
+      <span style="color:#94a3b8;font-weight:600;" class="sv">Subtotal: − ${BRL(totalAgenda)}</span>
+    </div>`;
+  }
+
+  // ── Seção 2: Saldo de orçamento não gasto por categoria ──
+  if(Array.isArray(STATE.orcamento) && STATE.orcamento.length){
+    const catsSaldo = STATE.categorias.filter(c=>c.tipo==='despesa').map(c=>{
+      const limite = getLimite(c.nome, m);
+      if(!limite) return null;
+      const gasto = sumOut(m, c.nome);
+      const agendaCat = agendaPendentes.filter(a=>a.categoria===c.nome).reduce((s,a)=>s+(parseFloat(a.valor)||0),0);
+      const restante = Math.max(0, limite - gasto - agendaCat);
+      if(restante <= 0.01) return null;
+      return {nome:c.nome, cor:c.cor||'#888', limite, gasto, agendaCat, restante};
+    }).filter(Boolean);
+
+    if(catsSaldo.length){
+      const totalOrc = catsSaldo.reduce((s,c)=>s+c.restante,0);
+      totalGeral += totalOrc;
+      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:10px 4px 5px;font-weight:600;">📊 Saldo de orçamento disponível</div>`;
+      html += catsSaldo.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${c.cor};flex-shrink:0;display:inline-block;"></span>
+        <div style="flex:1;">
+          <div style="color:var(--text);">${c.nome}</div>
+          <div style="font-size:11px;color:var(--text3);">Limite: ${BRL(c.limite)} · Gasto: ${BRL(c.gasto)}${c.agendaCat>0?' · Agenda: '+BRL(c.agendaCat):''}</div>
+        </div>
+        <span style="color:#94a3b8;font-weight:600;font-variant-numeric:tabular-nums;" class="sv">− ${BRL(c.restante)}</span>
+      </div>`).join('');
+      html += `<div style="display:flex;justify-content:flex-end;padding:6px 4px;font-size:12px;border-bottom:2px solid var(--border2);">
+        <span style="color:#94a3b8;font-weight:600;" class="sv">Subtotal: − ${BRL(totalOrc)}</span>
+      </div>`;
+    }
+  }
+
+  if(!html) return '<div class="empty">Nenhuma despesa programada pendente neste mês</div>';
+
+  // Cabeçalho com total geral
+  const header = `<div style="padding:6px 4px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--text2);">
+    <span>Total planejado restante</span>
+    <span style="color:#94a3b8;font-weight:600;" class="sv">− ${BRL(totalGeral)}</span>
+  </div>`;
+
+  return header + html;
+}
+
 
 function toggleDrillCat(wid){
   const el  = document.getElementById(wid);
@@ -2279,120 +2453,6 @@ function renderExtratoFooter(list){
 }
 
 // ═══════════════════════════════════════
-// AI ANALYSIS — via Apps Script (sem CORS)
-// ═══════════════════════════════════════
-async function callClaude(systemPrompt, userMessage, messages){
-  if(!CFG.url) throw new Error('Configure a conexão com o Google Sheets primeiro.');
-  const msgs = messages || [{role:'user', content:userMessage}];
-  const r = await fetch(CFG.url, {
-    method:'POST',
-    body: JSON.stringify({
-      action:'callClaude',
-      key: CFG.secret,
-      system: systemPrompt,
-      messages: msgs,
-    })
-  });
-  const d = await r.json();
-  if(!d.ok || d.error) throw new Error(d.error || 'Erro na chamada ao Claude');
-  return d.text;
-}
-
-async function gerarAnalise(tipo){
-  const el=document.getElementById('aiResult');
-  el.className='ai-result loading';
-  el.innerHTML='<span class="spinner"></span> Analisando seus dados...';
-  try{
-    // Determine data scope
-    const includeAll = tipo === 'projecao'; // projeções precisam de histórico completo
-    const dados=getDataForAI(includeAll);
-
-    // Build context description
-    const hoje = today();
-    const mesAtual = hoje.slice(0,7);
-    const [yr, mo] = mesAtual.split('-').map(Number);
-
-    // Last trimester months
-    const trimMeses = [];
-    for(let i=1; i<=3; i++){
-      let mm = mo-i, yy = yr;
-      if(mm<=0){mm+=12;yy--;}
-      trimMeses.push(`${yy}-${String(mm).padStart(2,'0')}`);
-    }
-    const trimLabel = trimMeses.map(m=>monthLabel(m)).reverse().join(', ');
-
-    // Last month
-    let lm = mo-1, ly = yr;
-    if(lm<=0){lm+=12;ly--;}
-    const mesPasLabel = monthLabel(`${ly}-${String(lm).padStart(2,'0')}`);
-
-    const system=`Você é um assistente financeiro pessoal especializado. Analise os dados financeiros fornecidos e gere insights práticos e personalizados em português do Brasil. Seja direto, use valores reais dos dados, e formate sua resposta com títulos e listas para facilitar a leitura. Não use markdown com asteriscos — use texto simples com quebras de linha.`;
-
-    const prompts={
-      ano:`Faça uma análise financeira do ano ${curYear}. Identifique os padrões de gastos por categoria, maiores despesas, evolução mês a mês, o que está funcionando bem e 3 recomendações práticas priorizadas.\n\n${dados}`,
-      trimestre:`Analise os dados dos últimos 3 meses (${trimLabel}). Identifique tendências recentes, categorias que mais consumiram o orçamento, comparação entre os meses, e o que pode ser melhorado no próximo trimestre.\n\n${dados}`,
-      mes:`Analise detalhadamente ${mesPasLabel}. Quais categorias tiveram os maiores gastos? Houve gastos atípicos? Como o mês se compara à média dos anteriores? Dê 2 ações concretas para o próximo mês.\n\n${dados}`,
-      projecao:`Com base no histórico completo disponível, faça uma análise e projeções para os próximos 3 meses. Projete: receitas esperadas, gastos por categoria com base na média histórica, progresso nas metas de poupança, e saldo final projetado. Identifique riscos financeiros e oportunidades de melhora.\n\n${dados}`,
-      metas:`Analise o progresso das metas de poupança. Dê uma projeção realista de quando serão atingidas com base no histórico. Avalie se os aportes mensais são suficientes e sugira como acelerar o progresso.\n\n${dados}`,
-      cortes:`Identifique onde é possível cortar gastos com base no histórico. Priorize os cortes por impacto financeiro e facilidade de implementação. Seja específico com valores e categorias.\n\n${dados}`,
-    };
-    const result=await callClaude(system, prompts[tipo]||prompts.ano);
-    el.className='ai-result';
-    el.innerHTML=result.replace(/\n/g,'<br>');
-  }catch(e){
-    el.className='ai-result';
-    el.innerHTML=`<span style="color:var(--red)">Erro: ${e.message}</span>`;
-  }
-}
-
-async function sendChat(){
-  const input=document.getElementById('chatInput');
-  const msg=input.value.trim();
-  if(!msg)return;
-  input.value='';
-  addChatMsg('user',msg);
-  chatHistory.push({role:'user',content:msg});
-  addChatMsg('ai','<span class="spinner"></span> Pensando...','loading');
-  try{
-    // Detecta se a pergunta menciona 2025 para incluir dados desse ano
-    const anoPassado = new Date().getFullYear() - 1;
-    const inclui2025 = msg.includes(String(anoPassado)) || availableYears().some(y=>msg.includes(String(y))&&y!==curYear) || msg.toLowerCase().includes('ano passado') || msg.toLowerCase().includes('histórico completo');
-    const dados=getDataForAI(inclui2025);
-    const anoCtx = inclui2025 ? 'todos os anos disponíveis' : String(curYear);
-    const system=`Você é um assistente financeiro pessoal. Responda perguntas sobre as finanças do usuário com base nos dados fornecidos (${anoCtx}). Seja conciso, use os valores reais dos dados, e responda em português do Brasil. Dados:\n\n${dados}`;
-    const messages=chatHistory.map(m=>({role:m.role,content:m.content}));
-    const reply=await callClaude(system, null, messages);
-    chatHistory.push({role:'assistant',content:reply});
-    updateLastAiMsg(reply.replace(/\n/g,'<br>'));
-  }catch(e){
-    updateLastAiMsg(`<span style="color:var(--red)">Erro: ${e.message}</span>`);
-  }
-}
-
-function sendSuggested(q){
-  document.getElementById('chatInput').value=q;
-  sendChat();
-}
-
-function chatKeydown(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}
-}
-
-function addChatMsg(role,html,cls=''){
-  const msgs=document.getElementById('chatMsgs');
-  const div=document.createElement('div');
-  div.className=`chat-msg ${role}${cls?' '+cls:''}`;
-  div.innerHTML=html;
-  msgs.appendChild(div);
-  msgs.scrollTop=msgs.scrollHeight;
-}
-function updateLastAiMsg(html){
-  const msgs=document.getElementById('chatMsgs');
-  const ais=msgs.querySelectorAll('.chat-msg.ai');
-  if(ais.length){const last=ais[ais.length-1];last.innerHTML=html;last.classList.remove('loading');}
-}
-
-// ═══════════════════════════════════════
 // MODALS — LANÇAMENTO
 // ═══════════════════════════════════════
 function openLanc(tipo){
@@ -2694,40 +2754,6 @@ function processVencidos(){
   // Mas atualiza proxima_data se necessário para recorrentes já confirmados
 }
 
-function renderAgenda(){
-  const todayStr = today();
-  const ativos = STATE.agenda.filter(a => a.status !== 'cancelado' && a.status !== 'concluido');
-
-  // Alerta do dia
-  const hojePagar = ativos.filter(a => {
-    const st = getStatusItem(a);
-    return st === 'hoje' || st === 'vencido';
-  });
-  const alertEl = document.getElementById('agendaAlertHoje');
-  if(hojePagar.length && document.getElementById('page-agenda').classList.contains('active')){
-    alertEl.innerHTML = `<div style="background:var(--rdim);border:1px solid var(--rb);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px;">⚠ ${hojePagar.length} item(s) pendente(s) hoje</div>
-      ${hojePagar.map(a=>`<div style="font-size:12px;color:var(--text2);display:flex;justify-content:space-between;padding:3px 0;">
-        <span>${a.nome}</span>
-        <span style="color:${(a.fluxo||'saida')==='entrada'?'var(--green)':'var(--red)'}">${(a.fluxo||'saida')==='entrada'?'+':'−'}${BRL(a.valor)}</span>
-      </div>`).join('')}
-    </div>`;
-  } else {
-    alertEl.innerHTML = '';
-  }
-
-  // Também mostra alerta no dashboard (hero) se houver pendências
-  renderAgendaAlertDashboard(hojePagar);
-
-  // All items grouped by tipo (receitas + despesas together in each section)
-  const recorrentes = ativos.filter(a => a.tipo === 'recorrente');
-  const unicos      = ativos.filter(a => a.tipo === 'unico');
-  const assinaturas = ativos.filter(a => a.tipo === 'assinatura');
-
-  renderAgendaSection('agendaRecorrentes', recorrentes, 'Nenhum recorrente cadastrado');
-  renderAgendaSection('agendaUnicos',      unicos,      'Nenhum agendamento único cadastrado');
-  renderAgendaSection('agendaAssinaturas', assinaturas, 'Nenhuma assinatura cadastrada');
-}
 
 function renderAgendaAlertDashboard(hojePagar){
   let el = document.getElementById('agendaAlertDash');
@@ -2804,7 +2830,6 @@ function renderAgendaSection(elId, items, emptyMsg){
       <span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${stBg};color:${stColor};">${stLabel}</span>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
         <button class="tbtn" style="color:${(item.fluxo||'saida')==='entrada'?'var(--green)':'var(--green)'};border-color:var(--gb);" onclick="openPagar('${item.id}')">${(item.fluxo||'saida')==='entrada'?'Receber':'Pagar'}</button>
-        <button class="tbtn" onclick="openAdiar('${item.id}')">Adiar</button>
         <button class="tbtn" onclick="openEditAgenda('${item.id}')">Editar</button>
         <button class="tbtn del" onclick="delAgendaItem('${item.id}')">Excluir</button>
       </div>
@@ -2824,151 +2849,6 @@ function renderAgendaSection(elId, items, emptyMsg){
     html += sortedDesp.map(renderItem).join('');
   }
   el.innerHTML = html;
-}
-
-// ── MODALS AGENDA ──
-let _agTipo = 'recorrente';
-
-function populateCatSelByFluxo(id, fluxo){
-  const sel = document.getElementById(id);
-  if(!sel) return;
-  // For receita: show 'entrada' categories, or all if none exist
-  // For despesa: show 'despesa' categories
-  const tipo = fluxo === 'entrada' ? 'entrada' : 'despesa';
-  let cats = STATE.categorias.filter(c => c.tipo === tipo);
-  // If no 'entrada' categories exist yet, show a default set
-  if(fluxo === 'entrada' && !cats.length){
-    cats = [
-      {nome:'Salário CLT'}, {nome:'Freelance'}, {nome:'MEI / PJ'},
-      {nome:'Aluguel recebido'}, {nome:'Investimentos'}, {nome:'Outros'}
-    ];
-  }
-  sel.innerHTML = cats.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
-}
-
-function setAgTipo(fluxo){
-  document.getElementById('agFluxo').value = fluxo;
-  const bDesp = document.getElementById('agTipoDesp');
-  const bRec  = document.getElementById('agTipoRec');
-  if(fluxo==='saida'){
-    bDesp.style.opacity='1'; bRec.style.opacity='.4';
-    bDesp.classList.add('out'); bDesp.classList.remove('in');
-    bRec.classList.remove('out');
-  } else {
-    bRec.style.opacity='1'; bDesp.style.opacity='.4';
-    bRec.classList.add('in'); bDesp.classList.remove('out');
-  }
-  // Repopulate category select based on fluxo
-  populateCatSelByFluxo('agCat', fluxo);
-}
-
-function onDiaSelectChange(val){
-  const diaInput = document.getElementById('agDia');
-  if(val==='quinto_util'){
-    diaInput.style.display='none';
-    diaInput.value='0';
-  } else {
-    diaInput.style.display='block';
-    if(diaInput.value==='0') diaInput.value='';
-  }
-}
-
-function openAgendaModal(tipo){
-  _agTipo = tipo;
-  const titles = {recorrente:'Novo recorrente mensal',unico:'Novo agendamento único',assinatura:'Nova assinatura'};
-  document.getElementById('mAgendaTit').textContent = titles[tipo]||'Novo item';
-  document.getElementById('agId').value = '';
-  document.getElementById('agTipoHidden').value = tipo;
-  document.getElementById('agNome').value = '';
-  document.getElementById('agValor').value = '';
-  document.getElementById('agDesc').value = '';
-  document.getElementById('agDia').value = '';
-  document.getElementById('agDia').style.display = 'block';
-  document.getElementById('agDiaSelect').value = 'dia_fixo';
-  document.getElementById('agData').value = today();
-  document.getElementById('agParcela').value = '';
-  setAgTipo('saida'); // also populates agCat
-  document.getElementById('agDiaGrp').style.display  = tipo==='unico'?'none':'block';
-  document.getElementById('agDataGrp').style.display = tipo==='unico'?'block':'none';
-  document.getElementById('agPeriodGrp').style.display = tipo==='assinatura'?'block':'none';
-  document.getElementById('agParcelaGrp').style.display = 'none';
-  openModal('mAgenda');
-}
-
-function onPeriodChange(val){
-  document.getElementById('agParcelaGrp').style.display = val==='parcelado_12x'?'block':'none';
-}
-
-function openEditAgenda(id){
-  const item = STATE.agenda.find(a=>a.id===id);
-  if(!item) return;
-  _agTipo = item.tipo;
-  const titles = {recorrente:'Editar recorrente',unico:'Editar agendamento',assinatura:'Editar assinatura'};
-  document.getElementById('mAgendaTit').textContent = titles[item.tipo]||'Editar';
-  document.getElementById('agId').value = id;
-  document.getElementById('agTipoHidden').value = item.tipo;
-  document.getElementById('agNome').value = item.nome;
-  setCurrencyVal('agValor', item.valor);
-  document.getElementById('agDesc').value = item.descricao;
-  document.getElementById('agDia').value = item.dia_vencimento;
-  document.getElementById('agData').value = item.data_unica||today();
-  setCurrencyVal('agParcela', item.valor_parcela);
-  populateCatSelByFluxo('agCat', item.fluxo||'saida');
-  document.getElementById('agCat').value = item.categoria;
-  setAgTipo(item.fluxo||'saida');
-  const isQU = item.quinto_util==='sim';
-  document.getElementById('agDiaSelect').value = isQU ? 'quinto_util' : 'dia_fixo';
-  document.getElementById('agDia').style.display = isQU ? 'none' : 'block';
-  document.getElementById('agDiaGrp').style.display  = item.tipo==='unico'?'none':'block';
-  document.getElementById('agDataGrp').style.display = item.tipo==='unico'?'block':'none';
-  document.getElementById('agPeriodGrp').style.display = item.tipo==='assinatura'?'block':'none';
-  if(item.tipo==='assinatura'){
-    document.getElementById('agPeriod').value = item.periodicidade||'mensal';
-    document.getElementById('agParcelaGrp').style.display = item.periodicidade==='parcelado_12x'?'block':'none';
-  }
-  openModal('mAgenda');
-}
-
-async function submitAgenda(){
-  const btn = getSubmitBtn('mAgenda');
-  if(btn && btn.disabled) return;
-  const nome  = document.getElementById('agNome').value.trim();
-  const valor = getCurrencyVal('agValor');
-  const cat   = document.getElementById('agCat').value;
-  const desc  = document.getElementById('agDesc').value.trim();
-  const dia   = document.getElementById('agDia').value;
-  const data  = document.getElementById('agData').value;
-  const id    = document.getElementById('agId').value;
-  const tipo  = document.getElementById('agTipoHidden').value;
-  const period= tipo==='assinatura'?(document.getElementById('agPeriod').value||'mensal'):'mensal';
-  const parcela=tipo==='assinatura'&&period==='parcelado_12x'?(getCurrencyVal('agParcela')):0;
-  if(!nome){ alert('Digite o nome'); return; }
-  const fluxo = document.getElementById('agFluxo')?.value || 'saida';
-  const diaSelect = document.getElementById('agDiaSelect')?.value || 'dia_fixo';
-  const quintoUtil = diaSelect === 'quinto_util' ? 'sim' : 'nao';
-  const payload = {
-    tipo, nome, descricao:desc, categoria:cat,
-    valor:String(valor), valor_parcela:String(parcela),
-    periodicidade:period,
-    dia_vencimento:quintoUtil==='sim'?'0':dia, data_unica:data,
-    recorrente:tipo==='unico'?'nao':'sim', status:'ativo',
-    fluxo, quinto_util:quintoUtil,
-  };
-  if(id){
-    const item = STATE.agenda.find(a=>a.id===id);
-    if(item) Object.assign(item,{...payload,id});
-    saveLocal();
-    closeModal('mAgenda');
-    renderAgenda(); renderKPI(); renderChart();
-    pushBg('editAgenda',{id,...payload});
-  } else {
-    const newId = 'a'+Date.now();
-    STATE.agenda.push({id:newId,...payload,ultima_confirmacao:'',proxima_data:''});
-    saveLocal();
-    closeModal('mAgenda');
-    renderAgenda(); renderKPI(); renderChart();
-    pushBg('addAgenda',{id:newId,...payload});
-  }
 }
 
 function openPagar(id){
@@ -3027,35 +2907,16 @@ async function submitPagar(){
   pushBg('updateSaldo',{valor:String(STATE.saldo),data:STATE.saldoDate});
 }
 
-function openAdiar(id){
-  document.getElementById('adId').value = id;
-  document.getElementById('adData').value = today();
-  openModal('mAdiar');
-}
 
-function submitAdiar(){
-  const id   = document.getElementById('adId').value;
-  const data = document.getElementById('adData').value;
-  if(!data){ alert('Selecione uma data'); return; }
-  const item = STATE.agenda.find(a=>a.id===id);
-  if(!item) return;
-  if(item.tipo === 'unico') item.data_unica = data;
-  else item.proxima_data = data;
-  saveLocal();
-  closeModal('mAdiar');
-  renderAgenda();
-  pushBg('editAgenda',{id,data_unica:item.data_unica||'',proxima_data:item.proxima_data||''});
-}
 
 function delAgendaItem(id){
-  if(!confirm('Excluir este item da agenda?')) return;
-  const item = STATE.agenda.find(a=>a.id===id);
-  const calId = item?.calendar_event_id || '';
+  if(!confirm('Excluir este item? Esta ação não pode ser desfeita.')) return;
   STATE.agenda = STATE.agenda.filter(a=>a.id!==id);
   saveLocal();
-  renderAgenda();
-  pushBg('delAgenda',{id, calendar_event_id: calId});
+  renderAssinaturas();
+  pushBg('delAgenda',{id});
 }
+
 
 // ═══════════════════════════════════════
 // MÁSCARA DE MOEDA
@@ -3543,12 +3404,14 @@ function sumOrcamentoMonth(m){
 // Orçamento usado no gráfico: apenas para meses futuros onde não há lançamentos
 function sumOrcamentoProjected(m){
   const todayMes = today().slice(0,7);
-  if(m < todayMes) return 0; // only current and future months
-  const realExp = sumOut(m);
-  const agendaExp = sumAgendaExpenseMonth(m);
-  const orcTotal = sumOrcamentoMonth(m);
-  // Return what's not already covered by real spending or agenda
-  return Math.max(0, orcTotal - agendaExp - realExp);
+  if(m < todayMes) return 0;
+  // Mostra apenas o saldo de orçamento disponível por categoria (limite - já gasto)
+  return STATE.categorias.filter(c=>c.tipo==='despesa').reduce((s,c)=>{
+    const limite = getLimite(c.nome, m);
+    if(!limite) return s;
+    const gasto = sumOut(m, c.nome);
+    return s + Math.max(0, limite - gasto);
+  }, 0);
 }
 
 function renderOrcAlertsDashboard(){
@@ -3599,7 +3462,6 @@ function goPage(p){ switchPage(p); }
 function switchPage(p){
   document.querySelectorAll('.ntab').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
   document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id==='page-'+p));
-  if(p==='agenda') renderAgenda();
   if(p==='assinaturas') renderAssinaturas();
   if(p==='orcamento') renderOrcamento();
 }
